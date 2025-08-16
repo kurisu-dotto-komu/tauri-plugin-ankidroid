@@ -1,0 +1,51 @@
+{
+    "name": "tauri-plugin-ankidroid (GUI emulator)",
+    "dockerFile": "Dockerfile",
+    "remoteUser": "vscode",
+    "features": {
+        "ghcr.io/devcontainers/features/rust:1": {},
+        "ghcr.io/devcontainers/features/node:1": {
+            "version": "lts"
+        },
+        "ghcr.io/devcontainers/features/java:1": {
+            "version": "temurin-17"
+        }
+    },
+    "postCreateCommand": "corepack enable && pnpm -v && rustup show",
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "rust-lang.rust-analyzer",
+                "tauri-apps.tauri-vscode",
+                "esbenp.prettier-vscode",
+                "ms-azuretools.vscode-docker",
+                "redhat.vscode-yaml"
+            ]
+        }
+    },
+    "mounts": [
+        "source=android-sdk-cache,target=/opt/android-sdk-cache,type=volume"
+    ],
+    "runArgs": [
+        // KVM for HAXM-equivalent hardware accel (Linux-only)
+        "--device=/dev/kvm",
+        // Allow OpenGL to pass through; give container access to the host GPU via DRM
+        "--device=/dev/dri",
+        // X11 GUI forwarding
+        "-e",
+        "DISPLAY",
+        "-v",
+        "/tmp/.X11-unix:/tmp/.X11-unix:rw",
+        // Optional: loosen X11 access (dev-only). See README for safer 'xhost' use.
+        "--env",
+        "QT_X11_NO_MITSHM=1",
+        // Wayland users: VS Code typically runs Xwayland; DISPLAY is still fine.
+        // If using NVIDIA and nvidia-container-toolkit, uncomment:
+        // "--gpus=all"
+    ],
+    "containerEnv": {
+        "ANDROID_HOME": "/opt/android-sdk",
+        "ANDROID_SDK_ROOT": "/opt/android-sdk",
+        "ANDROID_EMULATOR_USE_SYSTEM_LIBS": "1"
+    }
+}
