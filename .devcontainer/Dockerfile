@@ -2,23 +2,23 @@ FROM mcr.microsoft.com/devcontainers/base:bookworm
 
 ARG ANDROID_SDK_ROOT=/opt/android-sdk
 ENV ANDROID_SDK_ROOT=${ANDROID_SDK_ROOT} \
-    ANDROID_HOME=${ANDROID_SDK_ROOT} \
-    PATH=${PATH}:${ANDROID_SDK_ROOT}/platform-tools:${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin:${ANDROID_SDK_ROOT}/emulator
+  ANDROID_HOME=${ANDROID_SDK_ROOT} \
+  PATH=${PATH}:${ANDROID_SDK_ROOT}/platform-tools:${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin:${ANDROID_SDK_ROOT}/emulator
 
 # GUI + GL bits for emulator window + hardware accel
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    unzip wget curl git ca-certificates \
-    libglu1-mesa mesa-utils libx11-6 libx11-xcb1 libxcb1 libxcomposite1 libxcursor1 libxi6 libxtst6 libxrandr2 libxdamage1 \
-    libasound2 udev \
-    qemu-kvm libvirt-daemon-system libvirt-clients \
+  unzip wget curl git ca-certificates \
+  libglu1-mesa mesa-utils libx11-6 libx11-xcb1 libxcb1 libxcomposite1 libxcursor1 libxi6 libxtst6 libxrandr2 libxdamage1 \
+  libasound2 udev \
+  qemu-kvm libvirt-daemon-system libvirt-clients \
   && rm -rf /var/lib/apt/lists/*
 
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Install a JDK for sdkmanager (headless is fine)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    openjdk-17-jdk-headless \
-    && rm -rf /var/lib/apt/lists/*
+  openjdk-17-jdk-headless \
+  && rm -rf /var/lib/apt/lists/*
 
 # Point JAVA_HOME and put it on PATH
 ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64

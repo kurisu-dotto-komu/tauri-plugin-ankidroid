@@ -6,9 +6,6 @@
         "ghcr.io/devcontainers/features/rust:1": {},
         "ghcr.io/devcontainers/features/node:1": {
             "version": "lts"
-        },
-        "ghcr.io/devcontainers/features/java:1": {
-            "version": "temurin-17"
         }
     },
     "postCreateCommand": "corepack enable && pnpm -v && rustup show",
