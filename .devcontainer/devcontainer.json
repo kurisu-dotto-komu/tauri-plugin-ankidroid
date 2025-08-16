@@ -1,14 +1,18 @@
 {
-    "name": "tauri-plugin-ankidroid (GUI emulator)",
+    "name": "tauri-plugin-ankidroid",
     "dockerFile": "Dockerfile",
     "remoteUser": "vscode",
     "features": {
         "ghcr.io/devcontainers/features/rust:1": {},
         "ghcr.io/devcontainers/features/node:1": {
             "version": "lts"
+        },
+        "ghcr.io/devcontainers/features/docker-in-docker:2": {
+            "version": "latest",
+            "enableNonRootDocker": "true"
         }
     },
-    "postCreateCommand": "corepack enable && pnpm -v && rustup show",
+    "postCreateCommand": "corepack enable && pnpm -v && rustup show && sudo /usr/local/bin/start-vnc.sh",
     "customizations": {
         "vscode": {
             "extensions": [
@@ -21,28 +25,22 @@
         }
     },
     "mounts": [
-        "source=android-sdk-cache,target=/opt/android-sdk-cache,type=volume"
+        "source=android-sdk-cache,target=/opt/android-sdk-cache,type=volume",
+        "source=android-avd,target=/home/vscode/.android/avd,type=volume"
     ],
     "runArgs": [
-        // KVM for HAXM-equivalent hardware accel (Linux-only)
-        "--device=/dev/kvm",
-        // Allow OpenGL to pass through; give container access to the host GPU via DRM
-        "--device=/dev/dri",
-        // X11 GUI forwarding
-        "-e",
-        "DISPLAY",
-        "-v",
-        "/tmp/.X11-unix:/tmp/.X11-unix:rw",
-        // Optional: loosen X11 access (dev-only). See README for safer 'xhost' use.
-        "--env",
-        "QT_X11_NO_MITSHM=1",
-        // Wayland users: VS Code typically runs Xwayland; DISPLAY is still fine.
-        // If using NVIDIA and nvidia-container-toolkit, uncomment:
-        // "--gpus=all"
+        "--cap-add=SYS_ADMIN",
+        "--security-opt", "apparmor=unconfined",
+        "--device=/dev/fuse"
     ],
     "containerEnv": {
         "ANDROID_HOME": "/opt/android-sdk",
         "ANDROID_SDK_ROOT": "/opt/android-sdk",
-        "ANDROID_EMULATOR_USE_SYSTEM_LIBS": "1"
-    }
+        "ANDROID_NDK_HOME": "/opt/android-sdk/ndk/25.1.8937393",
+        "NDK_HOME": "/opt/android-sdk/ndk/25.1.8937393",
+        "ANDROID_EMULATOR_USE_SYSTEM_LIBS": "1",
+        "DISPLAY": ":99",
+        "QT_X11_NO_MITSHM": "1"
+    },
+    "forwardPorts": [6080, 5901, 5037, 5554, 5555, 5173, 6901, 4723]
 }

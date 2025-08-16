@@ -1,0 +1,13 @@
+[workspace]
+resolver = "2"
+members = [
+    "packages/tauri-plugin-ankidroid",
+    "packages/demo-app/src-tauri"
+]
+
+[workspace.dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tauri = { version = "2" }
+thiserror = "1.0"
+log = "0.4"

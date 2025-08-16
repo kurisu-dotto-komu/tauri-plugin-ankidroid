@@ -1,0 +1,19 @@
+[package]
+name = "demo-app"
+version = "0.1.0"
+description = "Demo app for Tauri AnkiDroid plugin"
+authors = ["Tauri AnkiDroid Plugin Contributors"]
+edition = "2021"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { workspace = true, features = ["image-png"] }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tauri-plugin-ankidroid = { path = "../../tauri-plugin-ankidroid" }
+
+[lib]
+name = "demo_app_lib"
+crate-type = ["lib", "cdylib", "staticlib"]

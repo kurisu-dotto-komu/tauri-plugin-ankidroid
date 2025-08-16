@@ -1,0 +1,27 @@
+{
+  "name": "tauri-plugin-ankidroid-workspace",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "pnpm --recursive --parallel build",
+    "test": "pnpm --recursive test",
+    "test:all": "cargo test --workspace && pnpm test",
+    "lint": "pnpm --recursive lint",
+    "format": "pnpm --recursive format",
+    "clean": "pnpm --recursive clean && cargo clean",
+    "dev": "pnpm --filter demo-app dev",
+    "android:dev": "pnpm --filter demo-app android:dev",
+    "emulator:create": "bash scripts/emulator-create-avd.sh",
+    "emulator:start": "bash scripts/emulator-start.sh",
+    "emulator:stop": "bash scripts/emulator-start.sh stop",
+    "emulator:install-anki": "bash scripts/emu-install-ankidroid.sh",
+    "vnc:start": "bash scripts/vnc-start-services.sh",
+    "vnc:stop": "bash scripts/vnc-start-services.sh stop"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "prettier": "^3.0.0",
+    "typescript": "^5.0.0"
+  }
+}

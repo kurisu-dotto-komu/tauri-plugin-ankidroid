@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Required for Android 11+ to resolve AnkiDroid content provider -->
+    <queries>
+        <package android:name="com.ichi2.anki" />
+    </queries>
+    
+    <!-- Permission for AnkiDroid API access -->
+    <uses-permission android:name="com.ichi2.anki.permission.READ_WRITE_DATABASE" />
+</manifest>

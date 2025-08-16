@@ -1,0 +1,16 @@
+"$schema" = "../schemas/schema.json"
+
+[[permission]]
+identifier = "allow-hello"
+description = "Allows the hello command"
+commands.allow = ["hello"]
+
+[[permission]]
+identifier = "allow-list-cards"
+description = "Allows the list_cards command"
+commands.allow = ["list_cards"]
+
+[[permission]]
+identifier = "default"
+description = "Default permissions for the plugin"
+permissions = ["allow-hello", "allow-list-cards"]
