@@ -12,12 +12,10 @@
     "clean": "pnpm --recursive clean && cargo clean",
     "dev": "pnpm --filter demo-app dev",
     "android:dev": "pnpm --filter demo-app android:dev",
-    "emulator:create": "bash scripts/emulator-create-avd.sh",
-    "emulator:start": "bash scripts/emulator-start.sh",
-    "emulator:stop": "bash scripts/emulator-start.sh stop",
-    "emulator:install-anki": "bash scripts/emu-install-ankidroid.sh",
-    "vnc:start": "bash scripts/vnc-start-services.sh",
-    "vnc:stop": "bash scripts/vnc-start-services.sh stop"
+    "emu:create": "bash scripts/emu-create-avd.sh",
+    "emu:start": "bash scripts/emu-start.sh",
+    "emu:stop": "bash scripts/emu-start.sh stop",
+    "emu:install-anki": "bash scripts/emu-install-ankidroid.sh"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

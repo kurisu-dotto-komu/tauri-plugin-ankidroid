@@ -62,8 +62,7 @@ temp/
 .cache/
 
 # Android/Emulator specific
-third_party/apk/
+third-party-apks/
 *.apk
 .android/
 
-# VNC/Development specific

@@ -1,46 +1,34 @@
 {
-    "name": "tauri-plugin-ankidroid",
-    "dockerFile": "Dockerfile",
+    "name": "rust-node-android-vnc-tauri",
+    "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
     "remoteUser": "vscode",
     "features": {
-        "ghcr.io/devcontainers/features/rust:1": {},
-        "ghcr.io/devcontainers/features/node:1": {
-            "version": "lts"
+        "ghcr.io/devcontainers/features/rust:1": {
+            "version": "1.89"
         },
-        "ghcr.io/devcontainers/features/docker-in-docker:2": {
-            "version": "latest",
-            "enableNonRootDocker": "true"
+        "ghcr.io/devcontainers/features/node:1": {
+            "version": "22"
+        },
+        "ghcr.io/devcontainers/features/desktop-lite:1": {
+            "password": "noPassword"
+        },
+        "ghcr.io/devcontainers/features/java:1": {
+            "version": "17"
+        },
+        "ghcr.io/nordcominc/devcontainer-features/android-sdk:1": {
+            "platform": "35",
+            "buildTools": "35.0.0",
+            "extra_packages": "emulator platform-tools system-images;android-35;google_apis;x86_64"
         }
     },
-    "postCreateCommand": "corepack enable && pnpm -v && rustup show && sudo /usr/local/bin/start-vnc.sh",
     "customizations": {
         "vscode": {
             "extensions": [
                 "rust-lang.rust-analyzer",
                 "tauri-apps.tauri-vscode",
                 "esbenp.prettier-vscode",
-                "ms-azuretools.vscode-docker",
                 "redhat.vscode-yaml"
             ]
         }
-    },
-    "mounts": [
-        "source=android-sdk-cache,target=/opt/android-sdk-cache,type=volume",
-        "source=android-avd,target=/home/vscode/.android/avd,type=volume"
-    ],
-    "runArgs": [
-        "--cap-add=SYS_ADMIN",
-        "--security-opt", "apparmor=unconfined",
-        "--device=/dev/fuse"
-    ],
-    "containerEnv": {
-        "ANDROID_HOME": "/opt/android-sdk",
-        "ANDROID_SDK_ROOT": "/opt/android-sdk",
-        "ANDROID_NDK_HOME": "/opt/android-sdk/ndk/25.1.8937393",
-        "NDK_HOME": "/opt/android-sdk/ndk/25.1.8937393",
-        "ANDROID_EMULATOR_USE_SYSTEM_LIBS": "1",
-        "DISPLAY": ":99",
-        "QT_X11_NO_MITSHM": "1"
-    },
-    "forwardPorts": [6080, 5901, 5037, 5554, 5555, 5173, 6901, 4723]
+    }
 }
