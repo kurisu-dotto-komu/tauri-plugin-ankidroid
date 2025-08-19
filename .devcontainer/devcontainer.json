@@ -2,6 +2,12 @@
     "name": "rust-node-android-vnc-tauri",
     "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
     "remoteUser": "vscode",
+    "runArgs": [
+        "--shm-size=2g",
+        "--device=/dev/kvm",
+        "--group-add",
+        "kvm"
+    ],
     "features": {
         "ghcr.io/devcontainers/features/rust:1": {
             "version": "1.89"
@@ -20,6 +26,9 @@
             "buildTools": "35.0.0",
             "extra_packages": "emulator platform-tools system-images;android-35;google_apis;x86_64"
         }
+    },
+    "containerEnv": {
+        "VNC_RESOLUTION": "1024x768x32"
     },
     "customizations": {
         "vscode": {

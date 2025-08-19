@@ -4,8 +4,8 @@
 
 AVD_NAME="Pixel_7_API_35"
 DEVICE_ID="pixel_7"
-SYSTEM_IMAGE="system-images;android-35;google_apis_playstore;x86_64"
-PACKAGE_PATH="system-images;android-35;google_apis_playstore;x86_64"
+SYSTEM_IMAGE="system-images;android-35;google_apis;x86_64"
+PACKAGE_PATH="system-images;android-35;google_apis;x86_64"
 
 # SDK is already installed by devcontainer
 export ANDROID_HOME=${ANDROID_HOME:-$ANDROID_SDK_ROOT}
@@ -25,7 +25,6 @@ echo "Creating AVD: $AVD_NAME (Pixel 7)..."
 echo "no" | avdmanager create avd \
     -n "$AVD_NAME" \
     -k "$PACKAGE_PATH" \
-    -d "$DEVICE_ID" \
     -c 2048M \
     --force
 
@@ -39,9 +38,7 @@ hw.gpu.enabled=yes
 hw.gpu.mode=swiftshader_indirect
 hw.keyboard=yes
 hw.mainKeys=yes
-hw.navMode=3button
-showDeviceFrame=yes
-skin.name=pixel_7
+showDeviceFrame=no
 EOF
 fi
 
