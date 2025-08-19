@@ -11,6 +11,26 @@ description = "Allows the list_cards command"
 commands.allow = ["list_cards"]
 
 [[permission]]
+identifier = "allow-create-card"
+description = "Allows the create_card command"
+commands.allow = ["create_card"]
+
+[[permission]]
+identifier = "allow-get-decks"
+description = "Allows the get_decks command"
+commands.allow = ["get_decks"]
+
+[[permission]]
+identifier = "allow-update-card"
+description = "Allows the update_card command"
+commands.allow = ["update_card"]
+
+[[permission]]
+identifier = "allow-delete-card"
+description = "Allows the delete_card command"
+commands.allow = ["delete_card"]
+
+[[permission]]
 identifier = "default"
 description = "Default permissions for the plugin"
-permissions = ["allow-hello", "allow-list-cards"]
+permissions = ["allow-hello", "allow-list-cards", "allow-create-card", "allow-get-decks", "allow-update-card", "allow-delete-card"]

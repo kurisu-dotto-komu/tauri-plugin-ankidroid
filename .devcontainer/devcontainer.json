@@ -8,6 +8,10 @@
         "--group-add",
         "kvm"
     ],
+    "mounts": [
+        "source=tauri-plugin-ankidroid-cargo-cache,target=/usr/local/cargo/registry,type=volume",
+        "source=tauri-plugin-ankidroid-target-cache,target=/workspaces/tauri-plugin-ankidroid/target,type=volume"
+    ],
     "features": {
         "ghcr.io/devcontainers/features/rust:1": {
             "version": "1.89"
@@ -29,6 +33,30 @@
     },
     "containerEnv": {
         "VNC_RESOLUTION": "1024x768x32"
+    },
+    "forwardPorts": [
+        5173,
+        6080,
+        9222,
+        9229
+    ],
+    "portsAttributes": {
+        "5173": {
+            "label": "Vite Dev Server",
+            "onAutoForward": "notify"
+        },
+        "6080": {
+            "label": "VNC Desktop (noVNC)",
+            "onAutoForward": "notify"
+        },
+        "9222": {
+            "label": "Chrome DevTools",
+            "onAutoForward": "notify"
+        },
+        "9229": {
+            "label": "Node.js Inspector",
+            "onAutoForward": "silent"
+        }
     },
     "customizations": {
         "vscode": {

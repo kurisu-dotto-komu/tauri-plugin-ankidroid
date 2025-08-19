@@ -1,0 +1,15 @@
+{
+  "name": "tauri-plugin-ankidroid-android",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Tauri AnkiDroid plugin",
+  "scripts": {
+    "format": "make format",
+    "lint": "make lint",
+    "check": "make check",
+    "build": "make build",
+    "test": "make test",
+    "clean": "make clean"
+  },
+  "devDependencies": {}
+}

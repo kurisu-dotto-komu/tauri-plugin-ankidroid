@@ -88,6 +88,58 @@ Allows the list_cards command
 <tr>
 <td>
 
+`ankidroid:allow-create-card`
+
+</td>
+<td>
+
+Allows the create_card command
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`ankidroid:allow-get-decks`
+
+</td>
+<td>
+
+Allows the get_decks command
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`ankidroid:allow-update-card`
+
+</td>
+<td>
+
+Allows the update_card command
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`ankidroid:allow-delete-card`
+
+</td>
+<td>
+
+Allows the delete_card command
+
+</td>
+</tr>
+
+<tr>
+<td>
+
 `ankidroid:default`
 
 </td>

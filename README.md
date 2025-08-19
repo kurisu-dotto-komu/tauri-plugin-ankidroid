@@ -1,5 +1,13 @@
 # Tauri Plugin Workspace with Android Emulator
 
+## Package Overview
+
+This workspace contains multiple packages for building a Tauri plugin that interfaces with AnkiDroid:
+
+- **[`tauri-plugin-ankidroid-android`](./packages/tauri-plugin-ankidroid-android)** - The core Rust plugin providing native Android integration with AnkiDroid's content provider API
+- **[`tauri-plugin-ankidroid-js`](./packages/tauri-plugin-ankidroid-js)** - JavaScript/TypeScript bindings for the plugin, providing a clean API for Tauri apps
+- **[`tauri-plugin-ankidroid-e2e-test-app`](./packages/tauri-plugin-ankidroid-e2e-test-app)** - Example Tauri application demonstrating plugin usage and testing capabilities
+
 ## Development Environment
 
 We strongly recommend using the provided devcontainer for development. It includes everything you need:
@@ -20,15 +28,40 @@ We strongly recommend using the provided devcontainer for development. It includ
 3. **Start the emulator** - Run `npm run emu:start`
 4. **View the emulator** - Open `http://localhost:6080` in your browser
 5. **Install AnkiDroid** - Run `npm run emu:install-anki`
-6. **Develop** - Run `npm run android:dev` to test your Tauri app with the plugin
+6. **Develop** - Run `npm run dev` to start development with hot reload and DevTools
+
+### Hot Reload Development
+
+The `npm run dev` command provides a complete development environment with:
+
+- **Hot Module Replacement (HMR)** - React changes update instantly without losing state
+- **Rust Auto-rebuild** - Plugin code rebuilds automatically on changes
+- **Chrome DevTools** - Full debugging capabilities for your app
+- **Network Inspection** - Monitor API calls and responses
+
+### Using Chrome DevTools
+
+When running in the devcontainer, Chrome DevTools are automatically configured. To access them from your host machine:
+
+1. **Start development**: Run `npm run dev` in the devcontainer terminal
+2. **Open Chrome/Edge** on your host machine
+3. **Navigate to** `chrome://inspect` (or `edge://inspect` for Edge)
+4. **Find your app** under "Remote Target" section
+5. **Click "inspect"** to open DevTools
+
+The devcontainer automatically forwards these ports:
+- **5173** - Vite dev server (frontend with HMR)
+- **6080** - VNC desktop for viewing emulator
+- **9222** - Chrome DevTools Protocol
+- **9229** - Node.js debugging (if needed)
 
 ### Viewing the Android Emulator
 
-The devcontainer includes a VNC desktop for viewing the Android emulator GUI. To access it:
+The devcontainer includes a VNC desktop for viewing the Android emulator GUI:
 
-1. **From VS Code**: Open the Ports panel and forward port 6080
-2. **Open in browser**: Navigate to `http://localhost:6080`
-3. **No password required**: The VNC server is configured with no password for convenience
+1. **Open in browser**: Navigate to `http://localhost:6080`
+2. **No password required**: The VNC server is configured with no password for convenience
+3. **VS Code will auto-forward** the port when you start the emulator
 
 ### Available NPM Scripts
 
@@ -50,8 +83,10 @@ The devcontainer includes a VNC desktop for viewing the Android emulator GUI. To
 
 #### Development
 
-- `npm run dev` - Start the demo app in development mode
-- `npm run android:dev` - Start the demo app for Android development
+- `npm run dev` - Start development with hot reload and Chrome DevTools
+- `npm run dev:build` - Manual full rebuild and deploy (when hot reload isn't sufficient)
+- `npm run android:dev` - Lower-level Android development command
+- `npm run android:deploy` - Deploy release build to emulator/device
 
 
 

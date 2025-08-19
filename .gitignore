@@ -66,3 +66,11 @@ third-party-apks/
 *.apk
 .android/
 
+# Gradle build files
+.gradle/
+**/build/
+**/buildSrc/.kotlin/
+
+# Kotlin build cache
+**/.kotlin/
+

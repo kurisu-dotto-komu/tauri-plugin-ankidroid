@@ -1,0 +1,25 @@
+# Cargo configuration with useful aliases
+
+[alias]
+# Formatting
+fmt-check = "fmt -- --check"
+
+# Linting
+lint = "clippy -- -D warnings"
+lint-fix = "clippy --fix --allow-dirty --allow-staged"
+
+# Type checking
+check-all = "check --all-targets"
+
+# Testing
+test-all = "test --all-features"
+
+# External tools (requires manual installation)
+# cargo install cargo-machete cargo-audit cargo-outdated
+unused-deps = "machete"
+security = "audit"
+deps-outdated = "outdated"
+
+# Combined commands
+ci = "build --all-targets"
+quickfix = "fix --allow-dirty --allow-staged"

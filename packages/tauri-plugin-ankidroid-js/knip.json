@@ -1,0 +1,8 @@
+{
+  "entry": ["src/index.ts"],
+  "project": ["src/**/*.ts"],
+  "ignore": ["dist/**", "rollup.config.js"],
+  "ignoreDependencies": ["npm-run-all", "prettier", "rollup", "tslib", "vitest"],
+  "ignoreBinaries": ["rollup", "vitest", "prettier", "eslint", "tsc", "knip", "npm-run-all"],
+  "ignoreExportsUsedInFile": true
+}

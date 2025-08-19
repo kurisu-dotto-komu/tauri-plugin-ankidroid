@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "identifier": "com.tauri.ankidroid.demo",
   "build": {
-    "beforeDevCommand": "pnpm dev",
+    "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:5173",
-    "beforeBuildCommand": "pnpm build",
+    "beforeBuildCommand": "npm run build",
     "frontendDist": "../dist"
   },
   "app": {
@@ -25,7 +25,11 @@
           "description": "AnkiDroid plugin capabilities",
           "permissions": [
             "ankidroid:allow-hello",
-            "ankidroid:allow-list-cards"
+            "ankidroid:allow-list-cards",
+            "ankidroid:allow-create-card",
+            "ankidroid:allow-get-decks",
+            "ankidroid:allow-update-card",
+            "ankidroid:allow-delete-card"
           ],
           "windows": ["main"]
         }

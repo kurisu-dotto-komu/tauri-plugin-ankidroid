@@ -1,70 +1,246 @@
-import { useState } from 'react'
-import { listCards } from 'tauri-plugin-ankidroid-js'
-import './App.css'
+import { useState, useEffect } from 'react';
+import { listCards, createCard, getDecks, parseCards } from 'tauri-plugin-ankidroid-js';
+import './App.css';
 
 function App() {
-  const [cardsData, setCardsData] = useState('')
-  const [cardsLoading, setCardsLoading] = useState(false)
+  const [cardsData, setCardsData] = useState('');
+  const [cardsLoading, setCardsLoading] = useState(false);
+  const [createLoading, setCreateLoading] = useState(false);
+
+  // Form state for creating cards
+  const [front, setFront] = useState('Test HMR - Front');
+  const [back, setBack] = useState('Test HMR - Back');
+  const [deck, setDeck] = useState('E2E Test Deck');
+  const [tags, setTags] = useState('e2e-test');
+  const [createResult, setCreateResult] = useState('');
+
+  // Deck list
+  const [decks, setDecks] = useState<Array<{ id: number; name: string }>>([]);
 
   async function getCards() {
-    setCardsLoading(true)
+    setCardsLoading(true);
     try {
-      const response = await listCards()
-      
+      const response = await listCards();
+
       // Validate that response is valid JSON
       try {
-        JSON.parse(response)
-        setCardsData(response)
+        JSON.parse(response);
+        setCardsData(response);
       } catch (parseError) {
-        console.warn('Invalid JSON response from listCards:', parseError)
-        setCardsData(JSON.stringify([{
-          id: 0,
-          question: "Invalid JSON Response",
-          answer: `Raw response: ${response}`,
-          deck: "Error",
-          note: "The response was not valid JSON"
-        }], null, 2))
+        console.warn('Invalid JSON response from listCards:', parseError);
+        setCardsData(
+          JSON.stringify(
+            [
+              {
+                id: 0,
+                front: 'Invalid JSON Response',
+                back: `Raw response: ${response}`,
+                deck: 'Error',
+                tags: '',
+                note: 'The response was not valid JSON',
+              },
+            ],
+            null,
+            2
+          )
+        );
       }
     } catch (error) {
-      console.error('Error calling listCards:', error)
-      setCardsData(JSON.stringify([{
-        id: 0,
-        question: "Failed to load cards",
-        answer: `Error: ${error}`,
-        deck: "Error",
-        note: "Please check if AnkiDroid plugin is working correctly"
-      }], null, 2))
+      console.error('Error calling listCards:', error);
+      setCardsData(
+        JSON.stringify(
+          [
+            {
+              id: 0,
+              front: 'Failed to load cards',
+              back: `Error: ${error}`,
+              deck: 'Error',
+              tags: '',
+              note: 'Please check if AnkiDroid plugin is working correctly',
+            },
+          ],
+          null,
+          2
+        )
+      );
     } finally {
-      setCardsLoading(false)
+      setCardsLoading(false);
     }
   }
 
+  async function handleCreateCard() {
+    console.log('🟢 handleCreateCard called!', { front, back, deck, tags });
+
+    if (!front || !back) {
+      setCreateResult('Please enter both front and back text');
+      console.log('🟢 Missing front or back text');
+      return;
+    }
+
+    setCreateLoading(true);
+    setCreateResult('');
+
+    try {
+      console.log('🟢 Calling createCard...');
+      alert(JSON.stringify({ front, back, deck, tags }));
+      const result = await createCard(front, back, deck, tags);
+      console.log('🟢 createCard result:', result);
+
+      if (result.success) {
+        setCreateResult(`✅ Card created successfully! Note ID: ${result.noteId}`);
+        // Clear form
+        setFront('');
+        setBack('');
+        // Refresh card list
+        await getCards();
+      } else {
+        setCreateResult(`❌ Failed to create card: ${result.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Error creating card:', error);
+      setCreateResult(`❌ Error: ${error}`);
+    } finally {
+      setCreateLoading(false);
+    }
+  }
+
+  async function loadDecks() {
+    try {
+      const deckList = await getDecks();
+      setDecks(deckList);
+      if (deckList.length > 0 && !deck) {
+        setDeck(deckList[0].name);
+      }
+    } catch (error) {
+      console.error('Error loading decks:', error);
+    }
+  }
+
+  // Load decks and cards on mount
+  useEffect(() => {
+    loadDecks();
+    getCards();
+  }, []);
+
   return (
     <div className="container">
-      <h1>🃏 AnkiDroid Card Reader</h1>
-      
-      <div className="button-row">
-        <button onClick={getCards} disabled={cardsLoading}>
-          {cardsLoading ? '⏳ Loading Cards...' : '📚 Read AnkiDroid Cards'}
-        </button>
-      </div>
-      
-      {cardsData && (
-        <div className="cards-container">
-          <h3 className="cards-title">📋 Your AnkiDroid Cards</h3>
-          <div className="json-display">
-            {(() => {
-              try {
-                return JSON.stringify(JSON.parse(cardsData), null, 2)
-              } catch {
-                return cardsData
-              }
-            })()}
-          </div>
+      <h1>🃏 AnkiDroid E2E Test App</h1>
+
+      <div className="section">
+        <h2>📋 Your AnkiDroid Cards</h2>
+        <div className="button-row">
+          <button onClick={getCards} disabled={cardsLoading}>
+            {cardsLoading ? '⏳ Loading Cards...' : '🔄 Read AnkiDroid Cards'}
+          </button>
+          <button onClick={loadDecks}>📂 Load Decks</button>
         </div>
-      )}
+
+        {decks.length > 0 && (
+          <div className="decks-list">
+            <h3>Available Decks:</h3>
+            <ul>
+              {decks.map((d) => (
+                <li key={d.id}>
+                  {d.name} (ID: {d.id})
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {cardsData && (
+          <div className="cards-container">
+            <div className="cards-grid">
+              {(() => {
+                try {
+                  const cards = parseCards(cardsData);
+                  return cards.map((card, index) => (
+                    <div key={card.id || index} className="card-item">
+                      <div className="card-front">
+                        <strong>Q:</strong> {card.front}
+                      </div>
+                      <div className="card-back">
+                        <strong>A:</strong> {card.back}
+                      </div>
+                      <div className="card-meta">
+                        <span className="card-deck">📚 {card.deck}</span>
+                        {card.tags && <span className="card-tags">🏷️ {card.tags}</span>}
+                      </div>
+                    </div>
+                  ));
+                } catch {
+                  return (
+                    <div className="json-display">
+                      <pre>{cardsData}</pre>
+                    </div>
+                  );
+                }
+              })()}
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="section">
+        <h2>📝 Create New Card</h2>
+        <div className="form">
+          <div className="form-group">
+            <label htmlFor="front">Front (Question):</label>
+            <input
+              id="front"
+              type="text"
+              value={front}
+              onChange={(e) => setFront(e.target.value)}
+              placeholder="Enter question..."
+              className="input-field"
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="back">Back (Answer):</label>
+            <input
+              id="back"
+              type="text"
+              value={back}
+              onChange={(e) => setBack(e.target.value)}
+              placeholder="Enter answer..."
+              className="input-field"
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="deck">Deck:</label>
+            <input
+              id="deck"
+              type="text"
+              value={deck}
+              onChange={(e) => setDeck(e.target.value)}
+              placeholder="Deck name..."
+              className="input-field"
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="tags">Tags:</label>
+            <input
+              id="tags"
+              type="text"
+              value={tags}
+              onChange={(e) => setTags(e.target.value)}
+              placeholder="Tags (optional)..."
+              className="input-field"
+            />
+          </div>
+
+          <button onClick={handleCreateCard} disabled={createLoading} className="create-button">
+            {createLoading ? '⏳ Creating...' : '➕ Create Card'}
+          </button>
+
+          {createResult && <div className="result-message">{createResult}</div>}
+        </div>
+      </div>
     </div>
-  )
+  );
 }
 
-export default App
+export default App;

@@ -1,0 +1,40 @@
+{
+  "entry": ["src/main.tsx", "src/App.tsx"],
+  "project": ["src/**/*.{ts,tsx}"],
+  "ignore": [
+    "dist/**",
+    "src-tauri/**",
+    "vite.config.ts",
+    "vitest.config.ts",
+    "wdio.*.js",
+    "test-manual.cjs"
+  ],
+  "ignoreDependencies": [
+    "npm-run-all",
+    "prettier",
+    "@tauri-apps/cli",
+    "@tauri-apps/api",
+    "tauri-plugin-ankidroid-js",
+    "@wdio/appium-service",
+    "@wdio/cli",
+    "@wdio/local-runner",
+    "appium",
+    "appium-uiautomator2-driver",
+    "webdriverio",
+    "chai"
+  ],
+  "ignoreBinaries": [
+    "prettier",
+    "eslint",
+    "tsc",
+    "knip",
+    "npm-run-all",
+    "vite",
+    "vitest",
+    "tauri",
+    "wdio",
+    "appium",
+    "adb"
+  ],
+  "ignoreExportsUsedInFile": true
+}

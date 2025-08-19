@@ -9,7 +9,14 @@ mod mobile;
 
 pub fn init<R: Runtime>() -> TauriPlugin<R> {
     Builder::new("ankidroid")
-        .invoke_handler(tauri::generate_handler![commands::hello, commands::list_cards,])
+        .invoke_handler(tauri::generate_handler![
+            commands::hello,
+            commands::list_cards,
+            commands::create_card,
+            commands::get_decks,
+            commands::update_card,
+            commands::delete_card,
+        ])
         .setup(|app, api| {
             #[cfg(mobile)]
             {

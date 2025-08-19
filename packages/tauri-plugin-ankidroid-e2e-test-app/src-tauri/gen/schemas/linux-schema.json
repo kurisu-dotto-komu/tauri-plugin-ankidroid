@@ -177,6 +177,24 @@
       "description": "Permission identifier",
       "oneOf": [
         {
+          "description": "Allows the create_card command",
+          "type": "string",
+          "const": "ankidroid:allow-create-card",
+          "markdownDescription": "Allows the create_card command"
+        },
+        {
+          "description": "Allows the delete_card command",
+          "type": "string",
+          "const": "ankidroid:allow-delete-card",
+          "markdownDescription": "Allows the delete_card command"
+        },
+        {
+          "description": "Allows the get_decks command",
+          "type": "string",
+          "const": "ankidroid:allow-get-decks",
+          "markdownDescription": "Allows the get_decks command"
+        },
+        {
           "description": "Allows the hello command",
           "type": "string",
           "const": "ankidroid:allow-hello",
@@ -187,6 +205,12 @@
           "type": "string",
           "const": "ankidroid:allow-list-cards",
           "markdownDescription": "Allows the list_cards command"
+        },
+        {
+          "description": "Allows the update_card command",
+          "type": "string",
+          "const": "ankidroid:allow-update-card",
+          "markdownDescription": "Allows the update_card command"
         },
         {
           "description": "Default permissions for the plugin",
