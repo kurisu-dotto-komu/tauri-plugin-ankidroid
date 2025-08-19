@@ -6,7 +6,7 @@ import App from '../App'
 const mockHello = vi.fn()
 const mockListCards = vi.fn()
 
-vi.mock('tauri-plugin-ankidroid-api', () => ({
+vi.mock('tauri-plugin-ankidroid-js', () => ({
   hello: mockHello,
   listCards: mockListCards,
 }))

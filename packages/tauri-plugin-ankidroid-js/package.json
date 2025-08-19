@@ -1,5 +1,5 @@
 {
-  "name": "tauri-plugin-ankidroid-api",
+  "name": "tauri-plugin-ankidroid-js",
   "version": "0.1.0",
   "description": "TypeScript bindings for the Tauri AnkiDroid plugin",
   "author": "Tauri AnkiDroid Plugin Contributors",

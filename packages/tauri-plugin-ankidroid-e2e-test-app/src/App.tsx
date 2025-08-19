@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { listCards } from 'tauri-plugin-ankidroid-api'
+import { listCards } from 'tauri-plugin-ankidroid-js'
 import './App.css'
 
 function App() {

@@ -1,7 +1,7 @@
 [package]
-name = "demo-app"
+name = "tauri-plugin-ankidroid-e2e-test-app"
 version = "0.1.0"
-description = "Demo app for Tauri AnkiDroid plugin"
+description = "E2E test app for Tauri AnkiDroid plugin"
 authors = ["Tauri AnkiDroid Plugin Contributors"]
 edition = "2021"
 
@@ -12,8 +12,8 @@ tauri-build = { version = "2", features = [] }
 tauri = { workspace = true, features = ["image-png"] }
 serde = { workspace = true }
 serde_json = { workspace = true }
-tauri-plugin-ankidroid = { path = "../../tauri-plugin-ankidroid" }
+tauri-plugin-ankidroid = { path = "../../tauri-plugin-ankidroid-android" }
 
 [lib]
-name = "demo_app_lib"
+name = "tauri_plugin_ankidroid_e2e_test_app_lib"
 crate-type = ["lib", "cdylib", "staticlib"]

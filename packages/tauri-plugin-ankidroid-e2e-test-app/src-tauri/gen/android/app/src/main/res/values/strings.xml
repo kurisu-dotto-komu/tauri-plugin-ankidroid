@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">tauri-plugin-ankidroid-e2e-test-app</string>
+    <string name="main_activity_title">tauri-plugin-ankidroid-e2e-test-app</string>
+</resources>

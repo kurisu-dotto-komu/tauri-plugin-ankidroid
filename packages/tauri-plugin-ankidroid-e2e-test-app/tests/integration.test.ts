@@ -38,7 +38,7 @@ describe('AnkiDroid Plugin Integration Tests', () => {
   })
 
   test('should handle AnkiDroid permission errors gracefully', async () => {
-    const { listCards } = await import('tauri-plugin-ankidroid-api')
+    const { listCards } = await import('tauri-plugin-ankidroid-js')
     
     const result = await listCards()
     expect(result).toBeDefined()
@@ -62,7 +62,7 @@ describe('AnkiDroid Plugin Integration Tests', () => {
   })
 
   test('should return valid JSON structure', async () => {
-    const { listCards } = await import('tauri-plugin-ankidroid-api')
+    const { listCards } = await import('tauri-plugin-ankidroid-js')
     
     const result = await listCards()
     
@@ -86,7 +86,7 @@ describe('AnkiDroid Plugin Integration Tests', () => {
   })
 
   test('should provide helpful setup instructions', async () => {
-    const { listCards } = await import('tauri-plugin-ankidroid-api')
+    const { listCards } = await import('tauri-plugin-ankidroid-js')
     
     const result = await listCards()
     const cards = JSON.parse(result)
@@ -102,7 +102,7 @@ describe('AnkiDroid Plugin Integration Tests', () => {
   })
 
   test('should not throw unhandled exceptions', async () => {
-    const { listCards } = await import('tauri-plugin-ankidroid-api')
+    const { listCards } = await import('tauri-plugin-ankidroid-js')
     
     // Test that the function doesn't throw, even on errors
     await expect(listCards()).resolves.not.toThrow()
@@ -117,7 +117,7 @@ describe('AnkiDroid Plugin Integration Tests', () => {
   })
 
   test('should handle various error scenarios gracefully', async () => {
-    const { listCards } = await import('tauri-plugin-ankidroid-api')
+    const { listCards } = await import('tauri-plugin-ankidroid-js')
     
     // Test different error scenarios
     const errorScenarios = [
@@ -147,7 +147,7 @@ describe('AnkiDroid Plugin Integration Tests', () => {
 
 describe('Crash Prevention Tests', () => {
   test('should never return undefined or null', async () => {
-    const { listCards } = await import('tauri-plugin-ankidroid-api')
+    const { listCards } = await import('tauri-plugin-ankidroid-js')
     
     // Even with severe errors, should return a string
     mockInvoke.mockRejectedValueOnce(new Error('FATAL ERROR'))
@@ -159,7 +159,7 @@ describe('Crash Prevention Tests', () => {
   })
 
   test('should handle malformed responses', async () => {
-    const { listCards } = await import('tauri-plugin-ankidroid-api')
+    const { listCards } = await import('tauri-plugin-ankidroid-js')
     
     // Test with malformed responses
     mockInvoke.mockResolvedValueOnce('invalid json{')
@@ -172,7 +172,7 @@ describe('Crash Prevention Tests', () => {
   })
 
   test('should handle timeout scenarios', async () => {
-    const { listCards } = await import('tauri-plugin-ankidroid-api')
+    const { listCards } = await import('tauri-plugin-ankidroid-js')
     
     // Simulate timeout
     mockInvoke.mockImplementationOnce(() => 

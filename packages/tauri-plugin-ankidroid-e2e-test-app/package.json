@@ -1,5 +1,5 @@
 {
-  "name": "demo-app",
+  "name": "tauri-plugin-ankidroid-e2e-test-app",
   "private": true,
   "version": "0.1.0",
   "type": "module",
@@ -11,7 +11,7 @@
     "tauri:dev": "tauri dev",
     "android:dev": "tauri android dev",
     "android:build": "tauri android build",
-    "android:deploy": "export NDK_HOME=/opt/android-sdk/ndk/25.2.9519653 && pnpm build && pnpm tauri android build --debug && adb install -r src-tauri/gen/android/app/build/outputs/apk/universal/debug/app-universal-debug.apk && adb shell am force-stop com.tauri.ankidroid.demo && adb shell am start -n com.tauri.ankidroid.demo/.MainActivity",
+    "android:deploy": "export NDK_HOME=/opt/android-sdk/ndk/25.2.9519653 && npm run build && npm run tauri android build -- --debug && adb install -r src-tauri/gen/android/app/build/outputs/apk/universal/debug/app-universal-debug.apk && adb shell am force-stop com.tauri.ankidroid.demo && adb shell am start -n com.tauri.ankidroid.demo/.MainActivity",
     "clean": "rm -rf dist",
     "test": "vitest",
     "test:ui": "vitest --ui",
@@ -23,7 +23,7 @@
     "@tauri-apps/api": "^2.0.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "tauri-plugin-ankidroid-api": "workspace:*"
+    "tauri-plugin-ankidroid-js": "*"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.0.0",
