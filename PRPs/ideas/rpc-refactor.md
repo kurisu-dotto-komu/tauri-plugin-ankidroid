@@ -8,13 +8,36 @@ We are refactoring our WIP Tauri plugin project to migrate away from Rust's JNI 
 
 We're having problems with the current architecture as handling all this within rust is getting too complex.
 
-We had this working before in an old project that used Capacitor. See `PRPs/planning/REFERENCE_IMPLEMENTATION.md` for a reference implementation of the old Capacitor implementation.
+We had this working before in an old project that used Capacitor. See `PRPs/planning/REFERENCE_IMPLEMENTATION.md` for a reference implementation of the old Capacitor implementation. Doing the business logic within Java/Kotlin will make things easier to maintain, especially with error handling and Java language features, but we still need a rust layer to integrate with Tauri.
 
-Doing the business logic within Java/Kotlin will make things easier to maintain, especially with error handling and Java language features, but we still need a rust layer to integrate with Tauri.
+The key diagram to understand our new prposed architecture is below:
 
-See `PRPs/planning/ARCHITECTURE_PLAN.md` for the proposed architecture. This is just a draft, and you should feel free to make changes to it. I'm not sure if "RPC" is the right name, so you can come up with a better term (tauri uses "invoke", I think, but we can come up with something specific for our case).
+```
+┌─────────────────┐
+│   JavaScript    │  Frontend API
+│  (TypeScript)   │  Clean, typed interface
+└────────┬────────┘
+         │ JSON RPC v2
+┌────────▼────────┐
+│      Rust       │  Thin RPC Proxy
+│  (rpc_proxy.rs) │  Single entry point
+└────────┬────────┘
+         │ JSON RPC v2
+┌────────▼────────┐
+│     Kotlin      │  Business Logic
+│(AnkiDroidPlugin)│  All Android/AnkiDroid interaction
+└─────────────────┘
+```
 
-See `PRPs/planning/API.md` for the proposed JS API - we will not implement all of this yet, but it should give you an idea of where we are going, and again, not a final spec.
+It's extremely important to understand that the Rust layer is very thin and does not need to know about our API. We're only using it to support Tauri. By leveraging the RPC API, we can keep the rust layer as a simple proxy. Our Ankidroid API only need to be defined in Typescript and Kotlin layers.
+
+Eventually, we want to implement all of the default AnkiDroid RPC methods, but for now just focus on Card CRUD.
+
+We probably want want to extend some helper methods in Kotlin layer, like ensuring a deck id is valid, or ensuring a model id is valid. Study the REFERENCE_IMPLEMENTATION.md file for an example.
+
+See `PRPs/planning/API.md` for the proposed full JS API - we will not implement all of this yet, but it should give you an idea of where we are going, and again, not a final spec.
+
+The JS api will include the full method names and expose typed parameters, but under the hood will use the RPC API we're creating.
 
 ## Goals
 
@@ -38,14 +61,24 @@ During the refactor, get rid of all superflous/dead code, across all of our pack
 
 We need to include a strong verification loop for each package, utilizing tests and the `npm run quickfix` scripts made available in each package. For the new packages, include similar scripts that exist currently.
 
-Make sure we are deploying to the right devices only on mobile. We don't need to deploy to desktop. Ensure dev deployments are the correct architecture.
+Make sure we are target builds to deploy only on mobile. We don't need to deploy to desktop. Ensure dev deployments are the correct architecture.
 
 ## Plan
 
 A high level overview of the plan:
 
 1. Create the new `tauri-plugin-ankidroid-rust` and `tauri-plugin-ankidroid-kotlin` packages, including relevant logic.
-2. Ensure unit tests are written code paths.
-3. Update frontend to use the new packages.
-4. Ensure we can build and run the app.
-5. Write basic happy-path e2e tests using the `e2e-test-app` package. We have had problems with this with simulating button pressing etc, so we will need to figure out a reliable way to do this.
+2. Rename `tauri-plugin-ankidroid-js` to `tauri-plugin-ankidroid-typescript`.
+3. Ensure unit tests are written code paths.
+4. Update frontend to use the new packages.
+5. Ensure we can build and run the app.
+6. Write basic happy-path e2e tests using the `e2e-test-app` package. We have had problems with this with simulating button pressing etc, so we will need to figure out a reliable way to do this.
+
+In total we should have 4 packages:
+
+- `tauri-plugin-ankidroid-typescript`
+- `tauri-plugin-ankidroid-rust`
+- `tauri-plugin-ankidroid-kotlin`
+- `tauri-plugin-ankidroid-e2e-test-app`
+
+We will need to update the `package.json` files in each package to reflect the new structure.
