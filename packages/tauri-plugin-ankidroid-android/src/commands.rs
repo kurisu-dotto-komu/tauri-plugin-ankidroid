@@ -1,9 +1,5 @@
-use serde::{Deserialize, Serialize};
-
-#[cfg(desktop)]
-use crate::desktop;
-#[cfg(mobile)]
 use crate::mobile;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize)]
 pub struct HelloRequest {
@@ -34,29 +30,13 @@ pub struct CreateCardResponse {
 #[tauri::command]
 pub async fn hello(name: String) -> Result<String, String> {
     log::info!("Hello command called with name: {}", name);
-
-    #[cfg(mobile)]
-    {
-        mobile::hello(name).await
-    }
-    #[cfg(desktop)]
-    {
-        desktop::hello(name).await
-    }
+    mobile::hello(name).await
 }
 
 #[tauri::command]
 pub async fn list_cards() -> Result<String, String> {
     log::info!("List cards command called");
-
-    #[cfg(mobile)]
-    {
-        mobile::list_cards().await
-    }
-    #[cfg(desktop)]
-    {
-        desktop::list_cards().await
-    }
+    mobile::list_cards().await
 }
 
 #[tauri::command]
@@ -66,37 +46,18 @@ pub async fn create_card(
     deck: Option<String>,
     tags: Option<String>,
 ) -> Result<String, String> {
-    log::error!(
-        "🟡 COMMAND: create_card invoked - front: {}, back: {}",
+    log::info!(
+        "Create card command called - front: {}, back: {}",
         front,
         back
     );
-
-    #[cfg(desktop)]
-    {
-        desktop::create_card(front, back, deck, tags).await
-    }
-    #[cfg(mobile)]
-    {
-        log::error!("🟡 COMMAND: Calling mobile::create_card");
-        let result = mobile::create_card(front, back, deck, tags).await;
-        log::error!("🟡 COMMAND: mobile::create_card returned: {:?}", result);
-        result
-    }
+    mobile::create_card(front, back, deck, tags).await
 }
 
 #[tauri::command]
 pub async fn get_decks() -> Result<String, String> {
     log::info!("Get decks command called");
-
-    #[cfg(mobile)]
-    {
-        mobile::get_decks().await
-    }
-    #[cfg(desktop)]
-    {
-        desktop::get_decks().await
-    }
+    mobile::get_decks().await
 }
 
 #[tauri::command]
@@ -113,29 +74,13 @@ pub async fn update_card(
         front,
         back
     );
-
-    #[cfg(mobile)]
-    {
-        mobile::update_card(note_id, front, back, deck, tags).await
-    }
-    #[cfg(desktop)]
-    {
-        desktop::update_card(note_id, front, back, deck, tags).await
-    }
+    mobile::update_card(note_id, front, back, deck, tags).await
 }
 
 #[tauri::command]
 pub async fn delete_card(note_id: i64) -> Result<String, String> {
     log::info!("Delete card command called - note_id: {}", note_id);
-
-    #[cfg(mobile)]
-    {
-        mobile::delete_card(note_id).await
-    }
-    #[cfg(desktop)]
-    {
-        desktop::delete_card(note_id).await
-    }
+    mobile::delete_card(note_id).await
 }
 
 #[cfg(test)]

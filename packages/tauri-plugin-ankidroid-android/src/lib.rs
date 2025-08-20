@@ -4,8 +4,11 @@ use tauri::{
 };
 
 mod commands;
-mod desktop;
 mod mobile;
+pub mod types;
+
+#[cfg(target_os = "android")]
+mod android;
 
 pub fn init<R: Runtime>() -> TauriPlugin<R> {
     Builder::new("ankidroid")
@@ -18,14 +21,7 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
             commands::delete_card,
         ])
         .setup(|app, api| {
-            #[cfg(mobile)]
-            {
-                mobile::init(app, api)?;
-            }
-            #[cfg(desktop)]
-            {
-                desktop::init(app, api)?;
-            }
+            mobile::init(app, api)?;
             Ok(())
         })
         .build()
