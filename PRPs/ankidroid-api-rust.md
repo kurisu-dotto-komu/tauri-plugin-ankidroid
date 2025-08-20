@@ -56,10 +56,6 @@ _This PRP contains all necessary information for implementing AnkiDroid API bind
   why: Official AnkiDroid API documentation with usage examples
   critical: Content provider URI structure and permission requirements
 
-- url: https://mozilla.github.io/uniffi-rs/latest/
-  why: UniFFI documentation for generating language bindings (alternative approach)
-  critical: Not used directly but provides context for FFI best practices
-
 - file: /workspaces/tauri-plugin-ankidroid/packages/tauri-plugin-ankidroid-android/src/android/jni_helpers.rs
   why: Existing JNI helper patterns for safe Android interop
   pattern: SafeJNIEnv wrapper, ContentValuesBuilder, error handling
@@ -130,8 +126,6 @@ _This PRP contains all necessary information for implementing AnkiDroid API bind
 │   │   │   │   ├── helpers.rs # JNI helper functions (from existing)
 │   │   │   │   ├── content_resolver.rs # ContentResolver operations
 │   │   │   │   └── cursor.rs  # Cursor handling
-│   │   │   └── ffi/           # Alternative FFI approach (future)
-│   │   │       └── mod.rs     # Placeholder for non-JNI approach
 │   │   ├── tests/
 │   │   │   ├── integration/   # Integration tests
 │   │   │   └── unit/          # Unit tests

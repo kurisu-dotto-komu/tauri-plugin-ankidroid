@@ -1,0 +1,30 @@
+[package]
+name = "ankidroid-api-rust"
+version = "0.1.0"
+edition = "2021"
+authors = ["AnkiDroid API Contributors"]
+description = "Type-safe Rust bindings for the AnkiDroid API"
+license = "MIT OR Apache-2.0"
+# repository = "https://github.com/kurisu-dotto-komu/ankidroid-api-rust"
+keywords = ["anki", "ankidroid", "flashcards", "api", "android"]
+categories = ["api-bindings", "mobile"]
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "2.0"
+log = "0.4"
+regex = "1.10"
+
+[target.'cfg(target_os = "android")'.dependencies]
+android_logger = "0.14"
+jni = "0.21"
+ndk = "0.9"
+ndk-context = "0.1"
+sha1 = "0.10"
+
+[dev-dependencies]
+env_logger = "0.11"
+
+[lib]
+crate-type = ["cdylib", "rlib"]

@@ -2,7 +2,8 @@
 resolver = "2"
 members = [
     "packages/tauri-plugin-ankidroid-android",
-    "packages/tauri-plugin-ankidroid-e2e-test-app/src-tauri"
+    "packages/tauri-plugin-ankidroid-e2e-test-app/src-tauri",
+    "packages/ankidroid-api-rust"
 ]
 
 [workspace.dependencies]

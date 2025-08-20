@@ -1,0 +1,48 @@
+{
+  "name": "ankidroid-api-rust",
+  "version": "0.1.0",
+  "description": "Type-safe Rust bindings for the AnkiDroid API",
+  "private": true,
+  "scripts": {
+    "build": "cargo build",
+    "build:android": "NDK_HOME=/usr/local/lib/android/ndk/25.2.9519653 cargo build --target aarch64-linux-android",
+    "build:android-arm": "NDK_HOME=/usr/local/lib/android/ndk/25.2.9519653 cargo build --target armv7-linux-androideabi",
+    "build:android-x86": "NDK_HOME=/usr/local/lib/android/ndk/25.2.9519653 cargo build --target i686-linux-android",
+    "build:android-x86_64": "NDK_HOME=/usr/local/lib/android/ndk/25.2.9519653 cargo build --target x86_64-linux-android",
+    "build:android:release": "NDK_HOME=/usr/local/lib/android/ndk/25.2.9519653 cargo build --release --target aarch64-linux-android",
+    "build:all-android": "npm run build:android && npm run build:android-arm && npm run build:android-x86 && npm run build:android-x86_64",
+    "test": "cargo test",
+    "test:android": "cargo test --target aarch64-linux-android",
+    "check": "cargo check",
+    "check:android": "cargo check --target aarch64-linux-android",
+    "clippy": "cargo clippy -- -D warnings",
+    "fmt": "cargo fmt",
+    "fmt:check": "cargo fmt -- --check",
+    "doc": "cargo doc --no-deps --open",
+    "clean": "cargo clean",
+    "example:add-note": "cargo run --example add_note",
+    "example:uri": "cargo run --example uri_example",
+    "example:utils": "cargo run --example utils_example",
+    "example:resolver": "cargo run --example content_resolver_example",
+    "install-targets": "rustup target add aarch64-linux-android armv7-linux-androideabi i686-linux-android x86_64-linux-android",
+    "verify": "npm run fmt:check && npm run clippy && npm run test && npm run build"
+  },
+  "keywords": [
+    "ankidroid",
+    "anki",
+    "flashcards",
+    "rust",
+    "android",
+    "jni"
+  ],
+  "author": "",
+  "license": "MIT OR Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/tauri-plugin-ankidroid.git",
+    "directory": "packages/ankidroid-api-rust"
+  },
+  "bugs": {
+    "url": "https://github.com/yourusername/tauri-plugin-ankidroid/issues"
+  }
+}

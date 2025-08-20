@@ -23,8 +23,7 @@
     "appium:stop": "pkill -f appium || true",
     "test:cleanup": "adb shell am force-stop com.tauri.ankidroid.demo",
     "test:e2e:webview": "npm run test:cleanup && wdio run ./wdio.android.conf.js --spec tests/simple-webview-test.e2e.js",
-    "test:e2e:create-card": "npm run test:cleanup && wdio run ./wdio.android.conf.js --spec tests/create-card-test.e2e.js",
-    "test:e2e:error-handling": "npm run test:cleanup && wdio run ./wdio.android.conf.js --spec tests/error-handling-test.e2e.js"
+    "test:e2e": "npm run test:cleanup && wdio run ./wdio.android.conf.js --spec tests/create-card-test.e2e.js"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.0.0",

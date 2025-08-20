@@ -2,6 +2,13 @@
     "name": "rust-node-android-vnc-tauri",
     "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
     "remoteUser": "vscode",
+    "remoteEnv": {
+        // TODO we can clean this up in the repo
+        "NDK_HOME": "/usr/local/lib/android/ndk/25.2.9519653"
+    },
+    "containerEnv": {
+        "VNC_RESOLUTION": "1024x768x32"
+    },
     "runArgs": [
         "--shm-size=2g",
         "--device=/dev/kvm",
@@ -30,9 +37,6 @@
             "buildTools": "35.0.0",
             "extra_packages": "emulator platform-tools system-images;android-35;google_apis;x86_64"
         }
-    },
-    "containerEnv": {
-        "VNC_RESOLUTION": "1024x768x32"
     },
     "forwardPorts": [
         5173,
