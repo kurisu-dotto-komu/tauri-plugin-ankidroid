@@ -10,7 +10,7 @@ function App() {
   // Form state for creating cards
   const [front, setFront] = useState('Test HMR - Front');
   const [back, setBack] = useState('Test HMR - Back');
-  const [deck, setDeck] = useState('E2E Test Deck');
+  const [selectedDeckId, setSelectedDeckId] = useState<number | null>(null);
   const [tags, setTags] = useState('e2e-test');
   const [createResult, setCreateResult] = useState('');
 
@@ -69,7 +69,7 @@ function App() {
   }
 
   async function handleCreateCard() {
-    console.log('🟢 handleCreateCard called!', { front, back, deck, tags });
+    console.log('🟢 handleCreateCard called!', { front, back, selectedDeckId, tags });
 
     if (!front || !back) {
       setCreateResult('Please enter both front and back text');
@@ -82,8 +82,11 @@ function App() {
 
     try {
       console.log('🟢 Calling createCard...');
-      alert(JSON.stringify({ front, back, deck, tags }));
-      const result = await createCard(front, back, deck, tags);
+      // Find deck name from ID
+      const selectedDeck = decks.find(d => d.id === selectedDeckId);
+      const deckName = selectedDeck ? selectedDeck.name : 'Default';
+      alert(JSON.stringify({ front, back, deckId: selectedDeckId, deckName, tags }));
+      const result = await createCard(front, back, deckName, tags);
       console.log('🟢 createCard result:', result);
 
       if (result.success) {
@@ -108,8 +111,8 @@ function App() {
     try {
       const deckList = await getDecks();
       setDecks(deckList);
-      if (deckList.length > 0 && !deck) {
-        setDeck(deckList[0].name);
+      if (deckList.length > 0 && selectedDeckId === null) {
+        setSelectedDeckId(deckList[0].id);
       }
     } catch (error) {
       console.error('Error loading decks:', error);
@@ -210,14 +213,19 @@ function App() {
 
           <div className="form-group">
             <label htmlFor="deck">Deck:</label>
-            <input
+            <select
               id="deck"
-              type="text"
-              value={deck}
-              onChange={(e) => setDeck(e.target.value)}
-              placeholder="Deck name..."
+              value={selectedDeckId || ''}
+              onChange={(e) => setSelectedDeckId(e.target.value ? Number(e.target.value) : null)}
               className="input-field"
-            />
+            >
+              <option value="">Select a deck...</option>
+              {decks.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.name} (ID: {d.id})
+                </option>
+              ))}
+            </select>
           </div>
 
           <div className="form-group">

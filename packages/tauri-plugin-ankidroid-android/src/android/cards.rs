@@ -41,11 +41,11 @@ pub fn create_card(
     let fields = format!("{}{}{}", front, FIELD_SEPARATOR, back);
     let tags_str = tags.unwrap_or("").trim();
 
-    // Create ContentValues
+    // Create ContentValues for the note
+    // Note: deck_id is stored in cards table, not notes table
     let mut env_for_values = env.clone();
     let values = ContentValuesBuilder::new(&mut env_for_values)?
         .put_long(note_columns::MID, model_id)?
-        .put_long("did", deck_id)? // Some versions use 'did' for deck ID
         .put_string(note_columns::FLDS, &fields)?
         .put_string(note_columns::TAGS, tags_str)?;
 
@@ -72,7 +72,6 @@ pub fn list_cards(
         note_columns::FLDS.to_string(),
         note_columns::TAGS.to_string(),
         note_columns::MID.to_string(),
-        "did".to_string(), // Deck ID
     ];
 
     let mut query_builder = query(env, NOTES_URI)
@@ -92,7 +91,7 @@ pub fn list_cards(
         let fields_str = cursor.get_string_by_name(note_columns::FLDS)?;
         let tags = cursor.get_string_by_name(note_columns::TAGS)?;
         let model_id = cursor.get_long_by_name(note_columns::MID)?;
-        let deck_id = cursor.get_long_by_name("did").unwrap_or(1);
+        let deck_id = 1; // Default deck ID, since notes don't have deck ID directly
 
         // Parse fields
         let (front, back) = parse_card_fields(&fields_str)?;
@@ -145,11 +144,12 @@ pub fn update_card(
         .put_string(note_columns::FLDS, &fields)?
         .put_string(note_columns::TAGS, tags_str)?;
 
-    // Update deck if specified
+    // Note: Deck ID cannot be set on notes directly, it's set on cards
+    // We would need to update the cards table separately if we want to change deck
     if let Some(deck_name) = deck_name {
         let mut env_for_deck = env.clone();
-        let deck_id = get_or_create_deck_id(&mut env_for_deck, activity, Some(deck_name))?;
-        values_builder = values_builder.put_long("did", deck_id)?;
+        let _deck_id = get_or_create_deck_id(&mut env_for_deck, activity, Some(deck_name))?;
+        // TODO: Update the deck ID in the cards table, not the notes table
     }
 
     // Update the note
@@ -226,7 +226,6 @@ pub fn get_card_by_id(
         note_columns::FLDS.to_string(),
         note_columns::TAGS.to_string(),
         note_columns::MID.to_string(),
-        "did".to_string(),
     ];
 
     let cursor = query(env, NOTES_URI)
@@ -240,7 +239,7 @@ pub fn get_card_by_id(
         let fields_str = cursor.get_string_by_name(note_columns::FLDS)?;
         let tags = cursor.get_string_by_name(note_columns::TAGS)?;
         let model_id = cursor.get_long_by_name(note_columns::MID)?;
-        let deck_id = cursor.get_long_by_name("did").unwrap_or(1);
+        let deck_id = 1; // Default deck ID, since notes don't have deck ID directly
 
         let (front, back) = parse_card_fields(&fields_str)?;
 

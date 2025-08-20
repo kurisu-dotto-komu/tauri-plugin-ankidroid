@@ -23,13 +23,14 @@
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:run": "vitest run",
+    "appium:start": "appium --address 127.0.0.1 --port 4723",
+    "appium:stop": "pkill -f appium || true",
     "test:e2e": "npm run test:e2e:grant-permission && wdio run ./wdio.android.conf.js",
-    "test:e2e:setup": "appium server --address 127.0.0.1 --port 4723 --log-level info",
     "test:e2e:grant-permission": "./scripts/grant-ankidroid-permission.sh",
+    "test:e2e:webview": "npm run test:e2e:grant-permission && wdio run ./wdio.android.conf.js --spec tests/simple-webview-test.e2e.js",
     "test:e2e:crud": "npm run test:e2e:grant-permission && wdio run ./wdio.android.conf.js --spec tests/e2e/crud-operations.e2e.js",
     "test:e2e:all": "npm run test:e2e",
-    "e2e": "npm run test:e2e:crud",
-    "e2e:setup": "npm run test:e2e:setup"
+    "e2e": "npm run test:e2e:crud"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.0.0",
