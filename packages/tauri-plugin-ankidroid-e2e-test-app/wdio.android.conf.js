@@ -1,5 +1,5 @@
 export const config = {
-  specs: ['./tests/e2e/**/*.js'],
+  specs: ['./tests/**/*.e2e.js'],
   maxInstances: 1,
   baseUrl: 'http://127.0.0.1:4723',
   port: 4723,
@@ -14,7 +14,6 @@ export const config = {
       'appium:noReset': true,
       'appium:newCommandTimeout': 60000,
       'appium:autoGrantPermissions': true,
-      'appium:chromedriverAutodownload': true,
       'appium:autoWebview': false,
       'appium:ensureWebviewsHavePages': true,
       'appium:nativeWebScreenshot': true,

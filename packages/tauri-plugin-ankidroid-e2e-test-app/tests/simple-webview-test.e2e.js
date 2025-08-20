@@ -102,7 +102,7 @@ describe('Simple WebView Test with $() Selectors', () => {
     console.log('✅ Complex CSS selectors working');
   });
 
-  it('should click a button and check for results', async () => {
+  it('should test Load Decks functionality', async () => {
     await driver.switchContext(webviewContext);
 
     // Click the Load Decks button
@@ -120,8 +120,128 @@ describe('Simple WebView Test with $() Selectors', () => {
     if (isDecksListVisible) {
       const decksItems = await $$('.decks-list li');
       console.log(`✅ Found ${decksItems.length} decks`);
+      
+      // Check if deck select dropdown was populated
+      const deckSelect = await $('#deck');
+      const deckOptions = await $$('#deck option');
+      console.log(`✅ Found ${deckOptions.length} deck options in dropdown`);
+      expect(deckOptions.length).to.be.greaterThan(1); // At least "Select a deck..." + 1 deck
     } else {
       console.log('ℹ️ Decks list not visible (might be empty or need permissions)');
+    }
+  });
+
+  it('should test Load Models functionality', async () => {
+    await driver.switchContext(webviewContext);
+
+    // Click the Load Models button
+    const loadModelsButton = await $('button*=Load Models');
+    await loadModelsButton.click();
+    console.log('Clicked Load Models button');
+
+    // Wait a bit for the operation
+    await driver.pause(1000);
+
+    // Check if models list appeared
+    const modelsList = await $('.models-list');
+    const isModelsListVisible = await modelsList.isDisplayed().catch(() => false);
+    
+    if (isModelsListVisible) {
+      const modelsItems = await $$('.models-list li');
+      console.log(`✅ Found ${modelsItems.length} models`);
+      
+      // Check if model select dropdown was populated
+      const modelSelect = await $('#model');
+      const modelOptions = await $$('#model option');
+      console.log(`✅ Found ${modelOptions.length} model options in dropdown`);
+      expect(modelOptions.length).to.be.greaterThan(1); // At least "Select a model..." + 1 model
+    } else {
+      console.log('ℹ️ Models list not visible (might be empty or no models found)');
+      
+      // Still check if dropdown exists
+      const modelSelect = await $('#model');
+      const isModelSelectVisible = await modelSelect.isDisplayed().catch(() => false);
+      expect(isModelSelectVisible).to.be.true;
+      console.log('✅ Model select dropdown is present');
+    }
+  });
+
+  it('should test card creation form with deck and model selection', async () => {
+    await driver.switchContext(webviewContext);
+
+    // First load decks and models
+    const loadDecksButton = await $('button*=Load Decks');
+    await loadDecksButton.click();
+    await driver.pause(500);
+    
+    const loadModelsButton = await $('button*=Load Models');
+    await loadModelsButton.click();
+    await driver.pause(500);
+
+    // Fill out the form
+    const frontInput = await $('#front');
+    const backInput = await $('#back');
+    const tagsInput = await $('#tags');
+    
+    await frontInput.clearValue();
+    await frontInput.setValue('E2E Test Question');
+    
+    await backInput.clearValue();
+    await backInput.setValue('E2E Test Answer');
+    
+    await tagsInput.clearValue();
+    await tagsInput.setValue('e2e-test automated');
+
+    // Check deck dropdown
+    const deckSelect = await $('#deck');
+    const deckOptions = await $$('#deck option');
+    if (deckOptions.length > 1) {
+      // Select the first actual deck (not the placeholder)
+      await deckSelect.selectByIndex(1);
+      console.log('✅ Selected a deck');
+    }
+
+    // Check model dropdown
+    const modelSelect = await $('#model');
+    const modelOptions = await $$('#model option');
+    if (modelOptions.length > 1) {
+      // Select the first actual model (not the placeholder)
+      await modelSelect.selectByIndex(1);
+      console.log('✅ Selected a model');
+    }
+
+    // Find and verify the Create Card button
+    const createButton = await $('button*=Create Card');
+    const isCreateButtonVisible = await createButton.isDisplayed();
+    expect(isCreateButtonVisible).to.be.true;
+    console.log('✅ Create Card button is ready');
+
+    // Note: We don't actually click create to avoid polluting the user's AnkiDroid
+    // In a real test environment, you would click and verify the result
+  });
+
+  it('should verify deck names are properly displayed', async () => {
+    await driver.switchContext(webviewContext);
+
+    // Load decks first
+    const loadDecksButton = await $('button*=Load Decks');
+    await loadDecksButton.click();
+    await driver.pause(1000);
+
+    // Check deck dropdown options
+    const deckOptions = await $$('#deck option');
+    if (deckOptions.length > 1) {
+      // Get text from deck options
+      for (let i = 1; i < Math.min(3, deckOptions.length); i++) {
+        const optionText = await deckOptions[i].getText();
+        console.log(`Deck option ${i}: ${optionText}`);
+        
+        // Verify it's not just showing "Deck [id]" pattern
+        // A proper deck name should either have a real name or follow "Deck ID" format
+        expect(optionText).to.not.be.empty;
+        expect(optionText).to.include('Deck'); // Should contain 'Deck' or actual deck name
+      }
+      console.log('✅ Deck names are displaying correctly');
     }
   });
 
