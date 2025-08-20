@@ -71,14 +71,15 @@ pub fn find_deck_id_by_name(
 
 /// Create a deck if it doesn't exist, otherwise return existing deck ID
 pub fn create_deck_if_not_exists(
-    env: SafeJNIEnv,
+    mut env: SafeJNIEnv,
     activity: &JObject,
     deck_name: &str,
 ) -> AndroidResult<i64> {
     log::info!("Creating deck if not exists: {}", deck_name);
 
     // First check if deck already exists
-    if let Some(existing_id) = find_deck_id_by_name(env, activity, deck_name)? {
+    let env_clone = env.clone();
+    if let Some(existing_id) = find_deck_id_by_name(env_clone, activity, deck_name)? {
         log::info!(
             "Deck '{}' already exists with ID: {}",
             deck_name,
@@ -88,7 +89,8 @@ pub fn create_deck_if_not_exists(
     }
 
     // Try to create the deck
-    match create_deck(env, activity, deck_name) {
+    let env_for_create = env.clone();
+    match create_deck(env_for_create, activity, deck_name) {
         Ok(deck_id) => {
             log::info!("Created new deck '{}' with ID: {}", deck_name, deck_id);
             Ok(deck_id)
@@ -121,7 +123,8 @@ pub fn create_deck(env: SafeJNIEnv, activity: &JObject, deck_name: &str) -> Andr
         return Err(AndroidError::validation_error("Deck name cannot be empty"));
     }
 
-    let values = ContentValuesBuilder::new(env)?
+    let mut env_for_values = env.clone();
+    let values = ContentValuesBuilder::new(&mut env_for_values)?
         .put_string(deck_columns::DECK_NAME, deck_name)?
         .put_string(deck_columns::NAME, deck_name)?; // Try both column names
 
@@ -173,7 +176,7 @@ pub fn deck_exists(env: SafeJNIEnv, activity: &JObject, deck_id: i64) -> Android
     let selection = format!("{} = ?", deck_columns::DID);
     let selection_args = vec![deck_id.to_string()];
 
-    let cursor = query(env, DECKS_URI)
+    let mut cursor = query(env, DECKS_URI)
         .projection(projection)
         .selection(selection)
         .selection_args(selection_args)
@@ -257,14 +260,15 @@ fn extract_id_from_uri(uri_string: &str) -> AndroidResult<i64> {
 
 /// Get or create deck ID for the given deck name
 pub fn get_or_create_deck_id(
-    env: SafeJNIEnv,
+    env: &mut SafeJNIEnv,
     activity: &JObject,
     deck_name: Option<&str>,
 ) -> AndroidResult<i64> {
     match deck_name {
         Some(name) => {
             validate_deck_name(name)?;
-            create_deck_if_not_exists(env, activity, name)
+            let env_clone = env.clone();
+            create_deck_if_not_exists(env_clone, activity, name)
         }
         None => {
             log::info!(

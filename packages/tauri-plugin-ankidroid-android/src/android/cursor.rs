@@ -33,7 +33,7 @@ impl<'local> CursorIterator<'local> {
             .env
             .env()
             .call_method(&self.cursor, "moveToFirst", "()Z", &[])
-            .check_exception(self.env.env())?;
+            .check_exception(self.env.env_mut())?;
 
         Ok(result.z().unwrap_or(false))
     }
@@ -48,7 +48,7 @@ impl<'local> CursorIterator<'local> {
             .env
             .env()
             .call_method(&self.cursor, "moveToNext", "()Z", &[])
-            .check_exception(self.env.env())?;
+            .check_exception(self.env.env_mut())?;
 
         Ok(result.z().unwrap_or(false))
     }
@@ -60,6 +60,7 @@ impl<'local> CursorIterator<'local> {
         }
 
         let column_string = self.env.new_string_checked(column_name)?;
+        let column_obj = JObject::from(column_string);
         let result = self
             .env
             .env()
@@ -67,9 +68,9 @@ impl<'local> CursorIterator<'local> {
                 &self.cursor,
                 "getColumnIndex",
                 "(Ljava/lang/String;)I",
-                &[JValue::Object(&column_string.into())],
+                &[JValue::Object(&column_obj)],
             )
-            .check_exception(self.env.env())?;
+            .check_exception(self.env.env_mut())?;
 
         Ok(result.i().unwrap_or(-1))
     }
@@ -93,7 +94,7 @@ impl<'local> CursorIterator<'local> {
                 "(I)Ljava/lang/String;",
                 &[JValue::Int(column_index)],
             )
-            .check_exception(self.env.env())?;
+            .check_exception(self.env.env_mut())?;
 
         let string_obj = result.l().map_err(AndroidError::from)?;
         if string_obj.is_null() {
@@ -122,7 +123,7 @@ impl<'local> CursorIterator<'local> {
                 "(I)J",
                 &[JValue::Int(column_index)],
             )
-            .check_exception(self.env.env())?;
+            .check_exception(self.env.env_mut())?;
 
         Ok(result.j().unwrap_or(0))
     }
@@ -141,7 +142,7 @@ impl<'local> CursorIterator<'local> {
             .env
             .env()
             .call_method(&self.cursor, "getInt", "(I)I", &[JValue::Int(column_index)])
-            .check_exception(self.env.env())?;
+            .check_exception(self.env.env_mut())?;
 
         Ok(result.i().unwrap_or(0))
     }
@@ -156,7 +157,7 @@ impl<'local> CursorIterator<'local> {
             .env
             .env()
             .call_method(&self.cursor, "getCount", "()I", &[])
-            .check_exception(self.env.env())?;
+            .check_exception(self.env.env_mut())?;
 
         Ok(result.i().unwrap_or(0))
     }
@@ -209,7 +210,7 @@ impl<'local> CursorIterator<'local> {
                 .env
                 .env()
                 .call_method(&self.cursor, "close", "()V", &[])
-                .check_exception(self.env.env())?;
+                .check_exception(self.env.env_mut())?;
             self.is_closed = true;
         }
         Ok(())
@@ -277,10 +278,16 @@ where
 {
     let mut results = Vec::new();
 
-    for row_result in cursor.iter() {
-        row_result?; // Check for iteration errors
-        let item = row_processor(&mut cursor)?;
-        results.push(item);
+    // Use manual iteration to avoid borrowing conflicts
+    if cursor.move_to_first()? {
+        loop {
+            let item = row_processor(&mut cursor)?;
+            results.push(item);
+            
+            if !cursor.move_to_next()? {
+                break;
+            }
+        }
     }
 
     Ok(results)

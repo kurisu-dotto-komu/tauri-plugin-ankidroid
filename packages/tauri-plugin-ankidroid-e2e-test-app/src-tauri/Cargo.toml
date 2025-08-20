@@ -9,10 +9,13 @@ edition = "2021"
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { workspace = true, features = ["image-png"] }
+tauri = { workspace = true, features = ["image-png", "wry"] }
 serde = { workspace = true }
 serde_json = { workspace = true }
-tauri-plugin-ankidroid = { path = "../../tauri-plugin-ankidroid-android" }
+tauri-plugin-ankidroid = { path = "../../tauri-plugin-ankidroid-android", features = ["tauri-plugin"] }
+
+[target.'cfg(not(target_os = "android"))'.dependencies]
+# No dependencies for non-Android targets since we're Android-only
 
 [lib]
 name = "tauri_plugin_ankidroid_e2e_test_app_lib"

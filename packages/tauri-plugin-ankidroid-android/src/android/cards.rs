@@ -9,7 +9,7 @@ use jni::objects::JObject;
 
 /// Create a new card (note) in AnkiDroid
 pub fn create_card(
-    env: SafeJNIEnv,
+    mut env: SafeJNIEnv,
     activity: &JObject,
     front: &str,
     back: &str,
@@ -27,22 +27,23 @@ pub fn create_card(
     validate_card_fields(front, back)?;
 
     // Get or create deck
-    let deck_id = get_or_create_deck_id(env, activity, deck_name)?;
+    let deck_id = get_or_create_deck_id(&mut env, activity, deck_name)?;
     log::info!("Using deck ID: {}", deck_id);
 
     // Find Basic model
-    let model_id = find_basic_model_id(env, activity)?;
+    let model_id = find_basic_model_id(&mut env, activity)?;
     log::info!("Using model ID: {}", model_id);
 
     // Validate model is suitable for cards
-    validate_model_for_cards(env, activity, model_id)?;
+    validate_model_for_cards(&mut env, activity, model_id)?;
 
     // Format fields with proper separator
     let fields = format!("{}{}{}", front, FIELD_SEPARATOR, back);
     let tags_str = tags.unwrap_or("").trim();
 
     // Create ContentValues
-    let values = ContentValuesBuilder::new(env)?
+    let mut env_for_values = env.clone();
+    let values = ContentValuesBuilder::new(&mut env_for_values)?
         .put_long(note_columns::MID, model_id)?
         .put_long("did", deck_id)? // Some versions use 'did' for deck ID
         .put_string(note_columns::FLDS, &fields)?
@@ -109,7 +110,7 @@ pub fn list_cards(
 
 /// Update an existing card (note)
 pub fn update_card(
-    env: SafeJNIEnv,
+    mut env: SafeJNIEnv,
     activity: &JObject,
     note_id: i64,
     front: &str,
@@ -128,8 +129,8 @@ pub fn update_card(
     validate_card_fields(front, back)?;
 
     // Check if note exists
-    if !note_exists(env, activity, note_id)? {
-        return Err(AndroidError::note_not_found(format!(
+    if !note_exists(env.clone(), activity, note_id)? {
+        return Err(AndroidError::NoteNotFound(format!(
             "Note ID {} not found",
             note_id
         )));
@@ -139,13 +140,15 @@ pub fn update_card(
     let fields = format!("{}{}{}", front, FIELD_SEPARATOR, back);
     let tags_str = tags.unwrap_or("").trim();
 
-    let mut values_builder = ContentValuesBuilder::new(env)?
+    let mut env_for_values = env.clone();
+    let mut values_builder = ContentValuesBuilder::new(&mut env_for_values)?
         .put_string(note_columns::FLDS, &fields)?
         .put_string(note_columns::TAGS, tags_str)?;
 
     // Update deck if specified
     if let Some(deck_name) = deck_name {
-        let deck_id = get_or_create_deck_id(env, activity, Some(deck_name))?;
+        let mut env_for_deck = env.clone();
+        let deck_id = get_or_create_deck_id(&mut env_for_deck, activity, Some(deck_name))?;
         values_builder = values_builder.put_long("did", deck_id)?;
     }
 
@@ -166,12 +169,13 @@ pub fn update_card(
 }
 
 /// Delete a card (note)
-pub fn delete_card(env: SafeJNIEnv, activity: &JObject, note_id: i64) -> AndroidResult<bool> {
+pub fn delete_card(mut env: SafeJNIEnv, activity: &JObject, note_id: i64) -> AndroidResult<bool> {
     log::info!("Deleting card with note ID: {}", note_id);
 
     // Check if note exists
-    if !note_exists(env, activity, note_id)? {
-        return Err(AndroidError::note_not_found(format!(
+    let env_clone = env.clone();
+    if !note_exists(env_clone, activity, note_id)? {
+        return Err(AndroidError::NoteNotFound(format!(
             "Note ID {} not found",
             note_id
         )));
@@ -199,7 +203,7 @@ pub fn note_exists(env: SafeJNIEnv, activity: &JObject, note_id: i64) -> Android
     let selection = format!("{} = ?", note_columns::ID);
     let selection_args = vec![note_id.to_string()];
 
-    let cursor = query(env, NOTES_URI)
+    let mut cursor = query(env, NOTES_URI)
         .projection(projection)
         .selection(selection)
         .selection_args(selection_args)
@@ -253,7 +257,7 @@ pub fn get_card_by_id(
     results
         .into_iter()
         .next()
-        .ok_or_else(|| AndroidError::note_not_found(format!("Note ID {} not found", note_id)))
+        .ok_or_else(|| AndroidError::NoteNotFound(format!("Note ID {} not found", note_id)))
 }
 
 /// Data structure for card information
@@ -318,11 +322,11 @@ fn parse_card_fields(fields_str: &str) -> AndroidResult<(String, String)> {
 fn extract_id_from_uri(uri_string: &str) -> AndroidResult<i64> {
     log::debug!("Extracting ID from URI: {}", uri_string);
 
-    uri_string
+    let id = uri_string
         .split('/')
         .last()
         .and_then(|id_str| id_str.parse::<i64>().ok())
-        .ok_or_else(|| {
+        .unwrap_or_else(|| {
             log::warn!("Could not parse note ID from URI: {}", uri_string);
             // Generate a timestamp-based ID as fallback
             let timestamp = std::time::SystemTime::now()
@@ -331,18 +335,17 @@ fn extract_id_from_uri(uri_string: &str) -> AndroidResult<i64> {
                 .as_secs() as i64;
             log::warn!("Using timestamp-based ID: {}", timestamp);
             timestamp
-        })
-        .map(|id| {
-            if id == 0 {
-                // If parsed ID is 0, use timestamp
-                std::time::SystemTime::now()
-                    .duration_since(std::time::UNIX_EPOCH)
-                    .unwrap()
-                    .as_secs() as i64
-            } else {
-                id
-            }
-        })
+        });
+    
+    Ok(if id == 0 {
+        // If parsed ID is 0, use timestamp
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs() as i64
+    } else {
+        id
+    })
 }
 
 #[cfg(test)]

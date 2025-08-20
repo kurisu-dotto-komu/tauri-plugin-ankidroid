@@ -8,13 +8,13 @@ use crate::android::jni_helpers::SafeJNIEnv;
 use jni::objects::JObject;
 
 /// Find a model ID by name with optional field count validation
-pub fn find_basic_model_id(env: SafeJNIEnv, activity: &JObject) -> AndroidResult<i64> {
+pub fn find_basic_model_id(env: &SafeJNIEnv, activity: &JObject) -> AndroidResult<i64> {
     find_model_id_by_name(env, activity, DEFAULT_MODEL_NAME, Some(2))
 }
 
 /// Find a model ID by name with optional field count validation
 pub fn find_model_id_by_name(
-    env: SafeJNIEnv,
+    env: &SafeJNIEnv,
     activity: &JObject,
     model_name: &str,
     min_field_count: Option<usize>,
@@ -31,7 +31,8 @@ pub fn find_model_id_by_name(
         model_columns::FLDS.to_string(),
     ];
 
-    let cursor = query(env, MODELS_URI)
+    let env_clone = env.clone();
+    let cursor = query(env_clone, MODELS_URI)
         .projection(projection)
         .execute(activity)?;
 
@@ -185,7 +186,7 @@ pub fn model_exists(env: SafeJNIEnv, activity: &JObject, model_id: i64) -> Andro
     let selection = format!("{} = ?", model_columns::MID);
     let selection_args = vec![model_id.to_string()];
 
-    let cursor = query(env, MODELS_URI)
+    let mut cursor = query(env, MODELS_URI)
         .projection(projection)
         .selection(selection)
         .selection_args(selection_args)
@@ -265,11 +266,12 @@ fn parse_field_count(fields_json: &str) -> AndroidResult<usize> {
 
 /// Validate that a model is suitable for basic card operations
 pub fn validate_model_for_cards(
-    env: SafeJNIEnv,
+    env: &mut SafeJNIEnv,
     activity: &JObject,
     model_id: i64,
 ) -> AndroidResult<()> {
-    let (name, field_count, model_type) = get_model_info(env, activity, model_id)?;
+    let env_for_info = env.clone();
+    let (name, field_count, model_type) = get_model_info(env_for_info, activity, model_id)?;
 
     if field_count < 2 {
         return Err(AndroidError::validation_error(format!(

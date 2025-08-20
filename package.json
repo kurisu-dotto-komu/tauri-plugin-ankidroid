@@ -10,6 +10,8 @@
     "build": "npm run build --workspaces",
     "test": "npm run test --workspaces",
     "test:all": "cargo test --workspace && npm test",
+    "test:e2e": "npm run test:e2e --workspace=tauri-plugin-ankidroid-e2e-test-app",
+    "e2e": "npm run e2e --workspace=tauri-plugin-ankidroid-e2e-test-app",
     "lint": "npm run lint --workspaces",
     "format": "npm run format --workspaces",
     "clean": "npm run clean --workspaces --if-present && cargo clean",

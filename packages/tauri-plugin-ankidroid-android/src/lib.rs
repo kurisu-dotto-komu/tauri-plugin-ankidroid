@@ -1,15 +1,19 @@
+#[cfg(feature = "tauri-plugin")]
 use tauri::{
     plugin::{Builder, TauriPlugin},
     Runtime,
 };
 
+#[cfg(feature = "tauri-plugin")]
 mod commands;
+#[cfg(feature = "tauri-plugin")]
 mod mobile;
 pub mod types;
 
 #[cfg(target_os = "android")]
 mod android;
 
+#[cfg(feature = "tauri-plugin")]
 pub fn init<R: Runtime>() -> TauriPlugin<R> {
     Builder::new("ankidroid")
         .invoke_handler(tauri::generate_handler![

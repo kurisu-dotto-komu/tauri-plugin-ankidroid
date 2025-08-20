@@ -12,15 +12,19 @@ links = "tauri-plugin-ankidroid"
 name = "tauri_plugin_ankidroid"
 crate-type = ["lib", "cdylib", "staticlib"]
 
+[features]
+default = ["tauri-plugin"]
+tauri-plugin = ["dep:tauri", "dep:tauri-plugin"]
+
 [build-dependencies]
-tauri-plugin = { version = "2", features = ["build"] }
+tauri-plugin = { version = "2", default-features = false, features = ["build"], optional = true }
 
 [dependencies]
-tauri = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
 log = { workspace = true }
+tauri = { workspace = true, optional = true }
 
 [target.'cfg(target_os = "android")'.dependencies]
 jni = "0.21"

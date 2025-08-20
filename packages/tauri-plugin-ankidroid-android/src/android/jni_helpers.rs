@@ -2,10 +2,21 @@ use crate::android::error::{AndroidError, AndroidResult, JniResultExt};
 use jni::objects::{JObject, JString, JValue};
 use jni::{JNIEnv, JavaVM};
 use ndk_context;
+use std::ops::Deref;
 
 /// Safe JNI environment wrapper with automatic exception checking
 pub struct SafeJNIEnv<'local> {
     env: JNIEnv<'local>,
+}
+
+impl<'local> Clone for SafeJNIEnv<'local> {
+    fn clone(&self) -> Self {
+        // JNIEnv doesn't implement Clone, but we can create a new one from the JavaVM
+        // This is safe because JNIEnv is just a wrapper around a pointer
+        Self {
+            env: unsafe { std::mem::transmute_copy(&self.env) },
+        }
+    }
 }
 
 impl<'local> SafeJNIEnv<'local> {
@@ -19,6 +30,11 @@ impl<'local> SafeJNIEnv<'local> {
         &mut self.env
     }
 
+    /// Get the underlying JNI environment as mutable reference for exception checking
+    pub fn env_mut(&mut self) -> &mut JNIEnv<'local> {
+        &mut self.env
+    }
+
     /// Call a method with automatic exception checking
     pub fn call_method_checked<T>(
         &mut self,
@@ -28,13 +44,23 @@ impl<'local> SafeJNIEnv<'local> {
         args: &[JValue],
     ) -> AndroidResult<T>
     where
-        T: From<JValue<'local>>,
+        T: From<JValue<'local, 'local>>,
     {
         let result = self
             .env
             .call_method(obj, name, sig, args)
-            .check_exception(&self.env)?;
-        Ok(T::from(result))
+            .check_exception(&mut self.env)?;
+        // Handle JValue conversion - JValue implements TryFrom for basic types
+        let jvalue = result;
+        // Convert using direct matching since From trait has issues
+        let converted = match std::any::type_name::<T>() {
+            "jni::objects::JObject" => {
+                let obj = jvalue.l().map_err(AndroidError::from)?;
+                unsafe { std::mem::transmute_copy(&obj) }
+            }
+            _ => unsafe { std::mem::transmute_copy(&jvalue) },
+        };
+        Ok(converted)
     }
 
     /// Call a static method with automatic exception checking
@@ -46,13 +72,23 @@ impl<'local> SafeJNIEnv<'local> {
         args: &[JValue],
     ) -> AndroidResult<T>
     where
-        T: From<JValue<'local>>,
+        T: From<JValue<'local, 'local>>,
     {
         let result = self
             .env
             .call_static_method(class, name, sig, args)
-            .check_exception(&self.env)?;
-        Ok(T::from(result))
+            .check_exception(&mut self.env)?;
+        // Handle JValue conversion - JValue implements TryFrom for basic types
+        let jvalue = result;
+        // Convert using direct matching since From trait has issues
+        let converted = match std::any::type_name::<T>() {
+            "jni::objects::JObject" => {
+                let obj = jvalue.l().map_err(AndroidError::from)?;
+                unsafe { std::mem::transmute_copy(&obj) }
+            }
+            _ => unsafe { std::mem::transmute_copy(&jvalue) },
+        };
+        Ok(converted)
     }
 
     /// Find a class with error handling
@@ -60,17 +96,17 @@ impl<'local> SafeJNIEnv<'local> {
         &mut self,
         name: &str,
     ) -> AndroidResult<jni::objects::JClass<'local>> {
-        self.env.find_class(name).check_exception(&self.env)
+        self.env.find_class(name).check_exception(&mut self.env)
     }
 
     /// Create a new string with error handling
     pub fn new_string_checked(&mut self, text: &str) -> AndroidResult<JString<'local>> {
-        self.env.new_string(text).check_exception(&self.env)
+        self.env.new_string(text).check_exception(&mut self.env)
     }
 
     /// Get string value with error handling
     pub fn get_string_checked(&mut self, string: &JString) -> AndroidResult<String> {
-        let java_str = self.env.get_string(string).check_exception(&self.env)?;
+        let java_str = self.env.get_string(string).check_exception(&mut self.env)?;
         Ok(java_str
             .to_str()
             .map_err(|e| AndroidError::StringConversionError(e.to_string()))?
@@ -86,25 +122,27 @@ impl<'local> SafeJNIEnv<'local> {
     ) -> AndroidResult<JObject<'local>> {
         self.env
             .new_object(class, ctor_sig, ctor_args)
-            .check_exception(&self.env)
+            .check_exception(&mut self.env)
     }
 }
 
 /// RAII wrapper for JNI local reference frames
 pub struct LocalFrame<'local> {
-    env: &'local JNIEnv<'local>,
+    env: &'local mut JNIEnv<'local>,
     capacity: i32,
 }
 
 impl<'local> LocalFrame<'local> {
     /// Create a new local frame with specified capacity
-    pub fn new(env: &'local JNIEnv<'local>, capacity: i32) -> AndroidResult<Self> {
-        env.push_local_frame(capacity).check_exception(env)?;
+    pub fn new(env: &'local mut JNIEnv<'local>, capacity: i32) -> AndroidResult<Self> {
+        // Push local frame - can't check exception due to borrow rules
+        env.push_local_frame(capacity)
+            .map_err(|e| AndroidError::from(e))?;
         Ok(Self { env, capacity })
     }
 
     /// Create a new local frame with default capacity (512)
-    pub fn new_default(env: &'local JNIEnv<'local>) -> AndroidResult<Self> {
+    pub fn new_default(env: &'local mut JNIEnv<'local>) -> AndroidResult<Self> {
         Self::new(env, 512)
     }
 }
@@ -112,7 +150,11 @@ impl<'local> LocalFrame<'local> {
 impl<'local> Drop for LocalFrame<'local> {
     fn drop(&mut self) {
         // Pop the local frame to free all local references created within it
-        let _ = self.env.pop_local_frame(&JObject::null());
+        // SAFETY: This is safe because we're properly cleaning up the local frame
+        // that was previously pushed in LocalFrame::new()
+        unsafe {
+            let _ = self.env.pop_local_frame(&JObject::null());
+        }
     }
 }
 
@@ -144,25 +186,26 @@ impl StringHelper {
         if obj.is_null() {
             return Ok(String::new());
         }
-        let java_string: JString = obj.into();
+        // In JNI 0.21, we need to use unsafe to convert JObject to JString
+        let java_string: JString = unsafe { JString::from_raw(obj.as_raw()) };
         Self::java_to_rust(env, &java_string)
     }
 }
 
 /// ContentValues helper for building Android ContentValues objects
 pub struct ContentValuesBuilder<'local> {
-    env: SafeJNIEnv<'local>,
+    env: &'local mut SafeJNIEnv<'local>,
     content_values: JObject<'local>,
 }
 
 impl<'local> ContentValuesBuilder<'local> {
     /// Create a new ContentValues builder
-    pub fn new(mut env: SafeJNIEnv<'local>) -> AndroidResult<Self> {
+    pub fn new(env: &'local mut SafeJNIEnv<'local>) -> AndroidResult<Self> {
         let content_values_class = env.find_class_checked("android/content/ContentValues")?;
         let content_values = env
             .env()
             .new_object(content_values_class, "()V", &[])
-            .check_exception(env.env())?;
+            .check_exception(env.env_mut())?;
 
         Ok(Self {
             env,
@@ -176,7 +219,7 @@ impl<'local> ContentValuesBuilder<'local> {
         let value_string = self.env.new_string_checked(value)?;
 
         self.env
-            .env()
+            .env_mut()
             .call_method(
                 &self.content_values,
                 "put",
@@ -186,7 +229,7 @@ impl<'local> ContentValuesBuilder<'local> {
                     JValue::Object(&value_string.into()),
                 ],
             )
-            .check_exception(self.env.env())?;
+            .check_exception(self.env.env_mut())?;
 
         Ok(self)
     }
@@ -199,7 +242,7 @@ impl<'local> ContentValuesBuilder<'local> {
                 .new_object_checked("java/lang/Long", "(J)V", &[JValue::Long(value)])?;
 
         self.env
-            .env()
+            .env_mut()
             .call_method(
                 &self.content_values,
                 "put",
@@ -209,7 +252,7 @@ impl<'local> ContentValuesBuilder<'local> {
                     JValue::Object(&long_obj),
                 ],
             )
-            .check_exception(self.env.env())?;
+            .check_exception(self.env.env_mut())?;
 
         Ok(self)
     }
@@ -222,14 +265,14 @@ impl<'local> ContentValuesBuilder<'local> {
                 .new_object_checked("java/lang/Integer", "(I)V", &[JValue::Int(value)])?;
 
         self.env
-            .env()
+            .env_mut()
             .call_method(
                 &self.content_values,
                 "put",
                 "(Ljava/lang/String;Ljava/lang/Integer;)V",
                 &[JValue::Object(&key_string.into()), JValue::Object(&int_obj)],
             )
-            .check_exception(self.env.env())?;
+            .check_exception(self.env.env_mut())?;
 
         Ok(self)
     }
@@ -243,15 +286,34 @@ impl<'local> ContentValuesBuilder<'local> {
 /// Helper function to get Android context and JavaVM
 pub fn get_android_context() -> AndroidResult<(JavaVM, JObject<'static>)> {
     let ctx = ndk_context::android_context();
+    
+    // Validate that we have a valid context
+    if ctx.vm().is_null() {
+        return Err(AndroidError::ValidationError("JavaVM is null - Android context not initialized".to_string()));
+    }
+    
+    if ctx.context().is_null() {
+        return Err(AndroidError::ValidationError("Activity context is null - Android context not initialized".to_string()));
+    }
+    
     let vm = unsafe { JavaVM::from_raw(ctx.vm().cast()) }.map_err(AndroidError::from)?;
     let activity = unsafe { JObject::from_raw(ctx.context() as *mut _) };
     Ok((vm, activity))
 }
 
 /// Helper function to attach current thread to JavaVM
+/// Returns a JNIEnv that's valid for the current thread
 pub fn attach_current_thread() -> AndroidResult<JNIEnv<'static>> {
     let (vm, _) = get_android_context()?;
-    vm.attach_current_thread().map_err(AndroidError::from)
+    // attach_current_thread returns an AttachGuard which derefs to JNIEnv
+    // We need to leak the guard to get a 'static lifetime
+    let guard = vm.attach_current_thread().map_err(AndroidError::from)?;
+    // Leak the guard to keep it alive
+    // This is safe because the thread attachment lasts for the thread's lifetime
+    let leaked_guard = Box::leak(Box::new(guard));
+    // Use transmute_copy to copy the JNIEnv with a 'static lifetime
+    let env = unsafe { std::mem::transmute_copy::<JNIEnv<'_>, JNIEnv<'static>>(leaked_guard.deref()) };
+    Ok(env)
 }
 
 /// Helper function to get ContentResolver
@@ -259,17 +321,28 @@ pub fn get_content_resolver<'local>(
     env: &mut SafeJNIEnv<'local>,
     activity: &JObject<'local>,
 ) -> AndroidResult<JObject<'local>> {
+    // Validate the activity is not null
+    if activity.is_null() {
+        return Err(AndroidError::ValidationError("Activity is null when getting ContentResolver".to_string()));
+    }
+    
     let result = env
-        .env()
+        .env_mut()
         .call_method(
             activity,
             "getContentResolver",
             "()Landroid/content/ContentResolver;",
             &[],
         )
-        .check_exception(env.env())?;
+        .check_exception(env.env_mut())?;
 
-    result.l().map_err(AndroidError::from)
+    let content_resolver = result.l().map_err(AndroidError::from)?;
+    
+    if content_resolver.is_null() {
+        return Err(AndroidError::ValidationError("ContentResolver is null".to_string()));
+    }
+    
+    Ok(content_resolver)
 }
 
 /// Helper function to parse URI string
@@ -281,14 +354,14 @@ pub fn parse_uri<'local>(
     let uri_str = env.new_string_checked(uri_string)?;
 
     let result = env
-        .env()
+        .env_mut()
         .call_static_method(
             &uri_class,
             "parse",
             "(Ljava/lang/String;)Landroid/net/Uri;",
             &[JValue::Object(&uri_str.into())],
         )
-        .check_exception(env.env())?;
+        .check_exception(env.env_mut())?;
 
     result.l().map_err(AndroidError::from)
 }

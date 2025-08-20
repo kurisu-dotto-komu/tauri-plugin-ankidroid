@@ -1,11 +1,11 @@
 use crate::android::{
     cards::{
-        create_card as android_create_card, delete_card as android_delete_card, get_card_by_id,
+        create_card as android_create_card, delete_card as android_delete_card,
         list_cards as android_list_cards, update_card as android_update_card, CardData,
     },
     decks::list_decks as android_list_decks,
     error::AndroidResult,
-    jni_helpers::{attach_current_thread, get_android_context, SafeJNIEnv},
+    jni_helpers::{attach_current_thread, SafeJNIEnv},
 };
 use crate::types::{Card, CreateCardResponse, Deck};
 use tauri::{AppHandle, Runtime};
@@ -161,9 +161,23 @@ async fn create_card_impl(
     deck: Option<&str>,
     tags: Option<&str>,
 ) -> AndroidResult<i64> {
+    // First attach the thread to get a valid JNI environment
     let env = attach_current_thread()?;
-    let safe_env = SafeJNIEnv::new(env);
-    let (_, activity) = get_android_context()?;
+    let mut safe_env = SafeJNIEnv::new(env);
+    
+    // Get a fresh activity reference for this thread
+    let ctx = ndk_context::android_context();
+    if ctx.context().is_null() {
+        return Err(crate::android::error::AndroidError::ValidationError(
+            "Android context not initialized. Ensure the app is running on Android.".to_string()
+        ));
+    }
+    
+    // Create a local reference to the activity
+    let activity = unsafe { 
+        let raw_activity = ctx.context() as *mut _;
+        jni::objects::JObject::from_raw(raw_activity)
+    };
 
     android_create_card(safe_env, &activity, front, back, deck, tags)
 }
@@ -171,7 +185,20 @@ async fn create_card_impl(
 async fn list_cards_impl() -> AndroidResult<Vec<Card>> {
     let env = attach_current_thread()?;
     let safe_env = SafeJNIEnv::new(env);
-    let (_, activity) = get_android_context()?;
+    
+    // Get a fresh activity reference for this thread
+    let ctx = ndk_context::android_context();
+    if ctx.context().is_null() {
+        return Err(crate::android::error::AndroidError::ValidationError(
+            "Android context not initialized. Ensure the app is running on Android.".to_string()
+        ));
+    }
+    
+    // Create a local reference to the activity
+    let activity = unsafe { 
+        let raw_activity = ctx.context() as *mut _;
+        jni::objects::JObject::from_raw(raw_activity)
+    };
 
     let card_data = android_list_cards(safe_env, &activity, Some(20))?; // Limit to 20 cards
 
@@ -186,8 +213,21 @@ async fn list_cards_impl() -> AndroidResult<Vec<Card>> {
 
 async fn get_decks_impl() -> AndroidResult<Vec<Deck>> {
     let env = attach_current_thread()?;
-    let safe_env = SafeJNIEnv::new(env);
-    let (_, activity) = get_android_context()?;
+    let mut safe_env = SafeJNIEnv::new(env);
+    
+    // Get a fresh activity reference for this thread
+    let ctx = ndk_context::android_context();
+    if ctx.context().is_null() {
+        return Err(crate::android::error::AndroidError::ValidationError(
+            "Android context not initialized. Ensure the app is running on Android.".to_string()
+        ));
+    }
+    
+    // Create a local reference to the activity
+    let activity = unsafe { 
+        let raw_activity = ctx.context() as *mut _;
+        jni::objects::JObject::from_raw(raw_activity)
+    };
 
     let deck_data = android_list_decks(safe_env, &activity)?;
 
@@ -207,16 +247,42 @@ async fn update_card_impl(
     tags: Option<&str>,
 ) -> AndroidResult<bool> {
     let env = attach_current_thread()?;
-    let safe_env = SafeJNIEnv::new(env);
-    let (_, activity) = get_android_context()?;
+    let mut safe_env = SafeJNIEnv::new(env);
+    
+    // Get a fresh activity reference for this thread
+    let ctx = ndk_context::android_context();
+    if ctx.context().is_null() {
+        return Err(crate::android::error::AndroidError::ValidationError(
+            "Android context not initialized. Ensure the app is running on Android.".to_string()
+        ));
+    }
+    
+    // Create a local reference to the activity
+    let activity = unsafe { 
+        let raw_activity = ctx.context() as *mut _;
+        jni::objects::JObject::from_raw(raw_activity)
+    };
 
     android_update_card(safe_env, &activity, note_id, front, back, deck, tags)
 }
 
 async fn delete_card_impl(note_id: i64) -> AndroidResult<bool> {
     let env = attach_current_thread()?;
-    let safe_env = SafeJNIEnv::new(env);
-    let (_, activity) = get_android_context()?;
+    let mut safe_env = SafeJNIEnv::new(env);
+    
+    // Get a fresh activity reference for this thread
+    let ctx = ndk_context::android_context();
+    if ctx.context().is_null() {
+        return Err(crate::android::error::AndroidError::ValidationError(
+            "Android context not initialized. Ensure the app is running on Android.".to_string()
+        ));
+    }
+    
+    // Create a local reference to the activity
+    let activity = unsafe { 
+        let raw_activity = ctx.context() as *mut _;
+        jni::objects::JObject::from_raw(raw_activity)
+    };
 
     android_delete_card(safe_env, &activity, note_id)
 }
@@ -226,7 +292,20 @@ async fn check_ankidroid_status() -> AndroidResult<String> {
 
     let env = attach_current_thread()?;
     let mut safe_env = SafeJNIEnv::new(env);
-    let (_, activity) = get_android_context()?;
+    
+    // Get a fresh activity reference for this thread
+    let ctx = ndk_context::android_context();
+    if ctx.context().is_null() {
+        return Err(crate::android::error::AndroidError::ValidationError(
+            "Android context not initialized. Ensure the app is running on Android.".to_string()
+        ));
+    }
+    
+    // Create a local reference to the activity
+    let activity = unsafe { 
+        let raw_activity = ctx.context() as *mut _;
+        jni::objects::JObject::from_raw(raw_activity)
+    };
 
     // Get PackageManager
     let package_manager = safe_env

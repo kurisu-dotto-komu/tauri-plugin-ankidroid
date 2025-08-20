@@ -38,7 +38,7 @@ check:
 
 # Building
 build:
-	cargo build --release
+	cargo build --release --no-default-features --target-dir target
 
 # Testing
 test:

@@ -113,11 +113,11 @@ pub type AndroidResult<T> = Result<T, AndroidError>;
 /// Helper trait for converting JNI results with exception checking
 pub trait JniResultExt<T> {
     /// Convert JNI result and check for Java exceptions
-    fn check_exception(self, env: &jni::JNIEnv) -> AndroidResult<T>;
+    fn check_exception(self, env: &mut jni::JNIEnv) -> AndroidResult<T>;
 }
 
 impl<T> JniResultExt<T> for jni::errors::Result<T> {
-    fn check_exception(self, env: &jni::JNIEnv) -> AndroidResult<T> {
+    fn check_exception(self, env: &mut jni::JNIEnv) -> AndroidResult<T> {
         match self {
             Ok(value) => {
                 // Check if a Java exception occurred
@@ -136,7 +136,7 @@ impl<T> JniResultExt<T> for jni::errors::Result<T> {
 }
 
 /// Helper function to extract exception message from JNI environment
-fn get_exception_message(env: &jni::JNIEnv) -> Option<String> {
+fn get_exception_message(env: &mut jni::JNIEnv) -> Option<String> {
     env.exception_occurred().ok().and_then(|exception| {
         env.call_method(&exception, "getMessage", "()Ljava/lang/String;", &[])
             .ok()

@@ -6,6 +6,7 @@ pub mod decks;
 pub mod error;
 pub mod jni_helpers;
 pub mod models;
+pub mod validation;
 
 pub use cards::*;
 pub use constants::*;
@@ -15,3 +16,4 @@ pub use decks::*;
 pub use error::*;
 pub use jni_helpers::*;
 pub use models::*;
+pub use validation::*;

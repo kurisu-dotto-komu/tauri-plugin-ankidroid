@@ -4,6 +4,7 @@ use crate::android::jni_helpers::{
     get_content_resolver, parse_uri, ContentValuesBuilder, SafeJNIEnv,
 };
 use jni::objects::{JObject, JValue};
+use std::ops::Deref;
 
 /// Builder pattern for ContentProvider queries
 pub struct ContentProviderQuery<'local> {
@@ -57,77 +58,101 @@ impl<'local> ContentProviderQuery<'local> {
         let content_resolver = get_content_resolver(&mut self.env, activity)?;
         let uri_obj = parse_uri(&mut self.env, &self.uri)?;
 
-        // Prepare projection array
-        let projection_array = if let Some(proj) = &self.projection {
+        // Prepare objects with proper lifetimes
+        let projection_obj = if let Some(proj) = &self.projection {
             let string_class = self.env.find_class_checked("java/lang/String")?;
             let array = self
                 .env
                 .env()
                 .new_object_array(proj.len() as i32, string_class, JObject::null())
-                .check_exception(self.env.env())?;
+                .check_exception(self.env.env_mut())?;
 
             for (i, column) in proj.iter().enumerate() {
                 let column_string = self.env.new_string_checked(column)?;
                 self.env
                     .env()
                     .set_object_array_element(&array, i as i32, column_string)
-                    .check_exception(self.env.env())?;
+                    .check_exception(self.env.env_mut())?;
             }
-            JValue::Object(&array.into())
+            Some(JObject::from(array))
         } else {
-            JValue::Object(&JObject::null())
+            None
         };
 
-        // Prepare selection string
-        let selection_obj = if let Some(sel) = &self.selection {
+        let selection_string_obj = if let Some(sel) = &self.selection {
             let sel_string = self.env.new_string_checked(sel)?;
-            JValue::Object(&sel_string.into())
+            Some(JObject::from(sel_string))
         } else {
-            JValue::Object(&JObject::null())
+            None
         };
 
-        // Prepare selection args array
-        let selection_args_array = if let Some(args) = &self.selection_args {
+        let selection_args_obj = if let Some(args) = &self.selection_args {
             let string_class = self.env.find_class_checked("java/lang/String")?;
             let array = self
                 .env
                 .env()
                 .new_object_array(args.len() as i32, string_class, JObject::null())
-                .check_exception(self.env.env())?;
+                .check_exception(self.env.env_mut())?;
 
             for (i, arg) in args.iter().enumerate() {
                 let arg_string = self.env.new_string_checked(arg)?;
                 self.env
                     .env()
                     .set_object_array_element(&array, i as i32, arg_string)
-                    .check_exception(self.env.env())?;
+                    .check_exception(self.env.env_mut())?;
             }
-            JValue::Object(&array.into())
+            Some(JObject::from(array))
         } else {
-            JValue::Object(&JObject::null())
+            None
         };
 
-        // Prepare sort order string
-        let sort_order_obj = if let Some(order) = &self.sort_order {
+        let sort_order_string_obj = if let Some(order) = &self.sort_order {
             let order_string = self.env.new_string_checked(order)?;
-            JValue::Object(&order_string.into())
+            Some(JObject::from(order_string))
         } else {
-            JValue::Object(&JObject::null())
+            None
+        };
+        
+        // Create JValue references after all objects are created
+        let null_obj = JObject::null();
+        let projection_array = if let Some(ref obj) = projection_obj {
+            JValue::Object(obj)
+        } else {
+            JValue::Object(&null_obj)
+        };
+
+        let selection_obj = if let Some(ref obj) = selection_string_obj {
+            JValue::Object(obj)
+        } else {
+            JValue::Object(&null_obj)
+        };
+
+        let selection_args_array = if let Some(ref obj) = selection_args_obj {
+            JValue::Object(obj)
+        } else {
+            JValue::Object(&null_obj)
+        };
+
+        let sort_order_obj = if let Some(ref obj) = sort_order_string_obj {
+            JValue::Object(obj)
+        } else {
+            JValue::Object(&null_obj)
         };
 
         // Execute query
+        let uri_jvalue = JValue::Object(&uri_obj);
         let cursor_result = self.env.env().call_method(
             &content_resolver,
             "query",
             "(Landroid/net/Uri;[Ljava/lang/String;Ljava/lang/String;[Ljava/lang/String;Ljava/lang/String;)Landroid/database/Cursor;",
             &[
-                JValue::Object(&uri_obj),
+                uri_jvalue,
                 projection_array,
                 selection_obj,
                 selection_args_array,
                 sort_order_obj,
             ],
-        ).check_exception(self.env.env())?;
+        ).check_exception(self.env.env_mut())?;
 
         let cursor = cursor_result.l().map_err(AndroidError::from)?;
         CursorIterator::new(self.env, cursor)
@@ -166,7 +191,10 @@ impl<'local> ContentProviderInsert<'local> {
                 &content_resolver,
                 "insert",
                 "(Landroid/net/Uri;Landroid/content/ContentValues;)Landroid/net/Uri;",
-                &[JValue::Object(&uri_obj), JValue::Object(&content_values)],
+                &[
+                    JValue::Object(&uri_obj),
+                    JValue::Object(&content_values),
+                ],
             )
             .check_exception(self.env.env())?;
 
@@ -235,33 +263,47 @@ impl<'local> ContentProviderUpdate<'local> {
         let uri_obj = parse_uri(&mut self.env, &self.uri)?;
         let content_values = values.build();
 
-        // Prepare selection string
-        let selection_obj = if let Some(sel) = &self.selection {
-            let sel_string = self.env.new_string_checked(sel)?;
-            JValue::Object(&sel_string.into())
+        // Prepare all objects first to ensure proper lifetime
+        let null_obj = JObject::null();
+        
+        // Create selection string if needed
+        let sel_string = if let Some(sel) = &self.selection {
+            Some(self.env.new_string_checked(sel)?)
         } else {
-            JValue::Object(&JObject::null())
+            None
         };
-
-        // Prepare selection args array
-        let selection_args_array = if let Some(args) = &self.selection_args {
+        
+        // Create selection args array if needed
+        let selection_args_array_obj = if let Some(args) = &self.selection_args {
             let string_class = self.env.find_class_checked("java/lang/String")?;
             let array = self
                 .env
                 .env()
                 .new_object_array(args.len() as i32, string_class, JObject::null())
-                .check_exception(self.env.env())?;
+                .check_exception(self.env.env_mut())?;
 
             for (i, arg) in args.iter().enumerate() {
                 let arg_string = self.env.new_string_checked(arg)?;
                 self.env
                     .env()
                     .set_object_array_element(&array, i as i32, arg_string)
-                    .check_exception(self.env.env())?;
+                    .check_exception(self.env.env_mut())?;
             }
-            JValue::Object(&array.into())
+            Some(JObject::from(array))
         } else {
-            JValue::Object(&JObject::null())
+            None
+        };
+        
+        // Now create JValues with proper references
+        // JString implements AsRef<JObject> so we can use it directly
+        let selection_obj = match sel_string.as_ref() {
+            Some(s) => JValue::Object(s.as_ref()),
+            None => JValue::Object(&null_obj),
+        };
+        
+        let selection_args_array = match selection_args_array_obj.as_ref() {
+            Some(a) => JValue::Object(a),
+            None => JValue::Object(&null_obj),
         };
 
         let result = self.env.env().call_method(
@@ -274,7 +316,7 @@ impl<'local> ContentProviderUpdate<'local> {
                 selection_obj,
                 selection_args_array,
             ],
-        ).check_exception(self.env.env())?;
+        ).check_exception(self.env.env_mut())?;
 
         Ok(result.i().unwrap_or(0))
     }
@@ -316,33 +358,47 @@ impl<'local> ContentProviderDelete<'local> {
         let content_resolver = get_content_resolver(&mut self.env, activity)?;
         let uri_obj = parse_uri(&mut self.env, &self.uri)?;
 
-        // Prepare selection string
-        let selection_obj = if let Some(sel) = &self.selection {
-            let sel_string = self.env.new_string_checked(sel)?;
-            JValue::Object(&sel_string.into())
+        // Prepare all objects first to ensure proper lifetime
+        let null_obj = JObject::null();
+        
+        // Create selection string if needed
+        let sel_string = if let Some(sel) = &self.selection {
+            Some(self.env.new_string_checked(sel)?)
         } else {
-            JValue::Object(&JObject::null())
+            None
         };
-
-        // Prepare selection args array
-        let selection_args_array = if let Some(args) = &self.selection_args {
+        
+        // Create selection args array if needed
+        let selection_args_array_obj = if let Some(args) = &self.selection_args {
             let string_class = self.env.find_class_checked("java/lang/String")?;
             let array = self
                 .env
                 .env()
                 .new_object_array(args.len() as i32, string_class, JObject::null())
-                .check_exception(self.env.env())?;
+                .check_exception(self.env.env_mut())?;
 
             for (i, arg) in args.iter().enumerate() {
                 let arg_string = self.env.new_string_checked(arg)?;
                 self.env
                     .env()
                     .set_object_array_element(&array, i as i32, arg_string)
-                    .check_exception(self.env.env())?;
+                    .check_exception(self.env.env_mut())?;
             }
-            JValue::Object(&array.into())
+            Some(JObject::from(array))
         } else {
-            JValue::Object(&JObject::null())
+            None
+        };
+        
+        // Now create JValues with proper references
+        // JString implements AsRef<JObject> so we can use it directly
+        let selection_obj = match sel_string.as_ref() {
+            Some(s) => JValue::Object(s.as_ref()),
+            None => JValue::Object(&null_obj),
+        };
+        
+        let selection_args_array = match selection_args_array_obj.as_ref() {
+            Some(a) => JValue::Object(a),
+            None => JValue::Object(&null_obj),
         };
 
         let result = self
