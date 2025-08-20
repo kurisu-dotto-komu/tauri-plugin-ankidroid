@@ -20,17 +20,9 @@
     "knip": "knip",
     "format-lint": "npm-run-all -s format lint",
     "quickfix": "npm-run-all -p format-lint typecheck knip",
-    "test": "vitest",
-    "test:ui": "vitest --ui",
-    "test:run": "vitest run",
-    "appium:start": "appium --address 127.0.0.1 --port 4723",
     "appium:stop": "pkill -f appium || true",
-    "test:e2e": "npm run test:e2e:grant-permission && wdio run ./wdio.android.conf.js",
-    "test:e2e:grant-permission": "./scripts/grant-ankidroid-permission.sh",
-    "test:e2e:webview": "npm run test:e2e:grant-permission && wdio run ./wdio.android.conf.js --spec tests/simple-webview-test.e2e.js",
-    "test:e2e:crud": "npm run test:e2e:grant-permission && wdio run ./wdio.android.conf.js --spec tests/e2e/crud-operations.e2e.js",
-    "test:e2e:all": "npm run test:e2e",
-    "e2e": "npm run test:e2e:crud"
+    "test:cleanup": "adb shell am force-stop com.tauri.ankidroid.demo",
+    "test:e2e:webview": "npm run test:cleanup && wdio run ./wdio.android.conf.js --spec tests/simple-webview-test.e2e.js"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.0.0",

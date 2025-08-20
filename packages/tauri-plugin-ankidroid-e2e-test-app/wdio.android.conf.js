@@ -9,7 +9,6 @@ export const config = {
       platformName: 'Android',
       'appium:automationName': 'UiAutomator2',
       'appium:deviceName': 'emulator-5554',
-      // App is already installed, just launch it???
       'appium:appPackage': 'com.tauri.ankidroid.demo',
       'appium:appActivity': '.MainActivity',
       'appium:noReset': true,
@@ -22,20 +21,20 @@ export const config = {
       'appium:webviewDetails': true,
     },
   ],
-  // services: [
-  //   [
-  //     'appium',
-  //     {
-  //       command: 'appium',
-  //       args: {
-  //         address: 'localhost',
-  //         port: 4723,
-  //         logLevel: 'info',
-  //       },
-  //       startTimeout: 10000,
-  //     },
-  //   ],
-  // ],
+  services: [
+    [
+      'appium',
+      {
+        command: 'appium',
+        args: {
+          address: '127.0.0.1',
+          port: 4723,
+          logLevel: 'info',
+        },
+        startTimeout: 10000,
+      },
+    ],
+  ],
   framework: 'mocha',
   reporters: ['spec'],
   mochaOpts: {
