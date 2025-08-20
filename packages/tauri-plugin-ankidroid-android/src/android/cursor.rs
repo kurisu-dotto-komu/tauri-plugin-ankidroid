@@ -162,6 +162,21 @@ impl<'local> CursorIterator<'local> {
         Ok(result.i().unwrap_or(0))
     }
 
+    /// Get the number of columns in the cursor
+    pub fn get_column_count(&mut self) -> AndroidResult<i32> {
+        if self.is_closed {
+            return Err(AndroidError::cursor_error("Cursor is closed"));
+        }
+
+        let result = self
+            .env
+            .env()
+            .call_method(&self.cursor, "getColumnCount", "()I", &[])
+            .check_exception(self.env.env_mut())?;
+
+        Ok(result.i().unwrap_or(0))
+    }
+
     /// Check if the cursor is closed
     pub fn is_closed(&self) -> bool {
         self.is_closed
@@ -283,7 +298,7 @@ where
         loop {
             let item = row_processor(&mut cursor)?;
             results.push(item);
-            
+
             if !cursor.move_to_next()? {
                 break;
             }

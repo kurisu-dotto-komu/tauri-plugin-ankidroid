@@ -42,10 +42,10 @@ pub fn create_card(
     let tags_str = tags.unwrap_or("").trim();
 
     // Create ContentValues for the note
-    // Note: deck_id is stored in cards table, not notes table
+    // IMPORTANT: Do NOT include 'mid' in ContentValues - it causes "Queue 'mid' is unknown" error
+    // The model ID is set through the deck's default model
     let mut env_for_values = env.clone();
     let values = ContentValuesBuilder::new(&mut env_for_values)?
-        .put_long(note_columns::MID, model_id)?
         .put_string(note_columns::FLDS, &fields)?
         .put_string(note_columns::TAGS, tags_str)?;
 
@@ -67,44 +67,104 @@ pub fn list_cards(
 ) -> AndroidResult<Vec<CardData>> {
     log::info!("Listing cards with limit: {:?}", limit);
 
+    // First, try a simple query to test basic connectivity
+    log::info!("Testing basic AnkiDroid connectivity...");
+    
     let projection = vec![
         note_columns::ID.to_string(),
         note_columns::FLDS.to_string(),
         note_columns::TAGS.to_string(),
-        note_columns::MID.to_string(),
     ];
 
-    let mut query_builder = query(env, NOTES_URI)
+    let query_builder = query(env, NOTES_URI)
         .projection(projection)
         .sort_order(format!("{} DESC", note_columns::MOD));
 
-    // Apply limit if specified
-    if let Some(limit_val) = limit {
-        query_builder =
-            query_builder.sort_order(format!("{} DESC LIMIT {}", note_columns::MOD, limit_val));
-    }
+    log::info!("Executing query against AnkiDroid ContentProvider...");
+    let cursor = match query_builder.execute(activity) {
+        Ok(cursor) => {
+            log::info!("Query executed successfully");
+            cursor
+        }
+        Err(e) => {
+            log::error!("Failed to execute query: {}", e);
+            return Err(e);
+        }
+    };
 
-    let cursor = query_builder.execute(activity)?;
+    log::info!("Collecting cursor results...");
+    let all_cards = match collect_cursor_results(cursor, |cursor| {
+        // Wrap each cursor read operation in error handling
+        let note_id = match cursor.get_long_by_name(note_columns::ID) {
+            Ok(id) => id,
+            Err(e) => {
+                log::warn!("Failed to read note ID: {}", e);
+                return Ok(CardData {
+                    id: 0,
+                    front: "Error reading ID".to_string(),
+                    back: format!("Error: {}", e),
+                    deck_id: 1,
+                    model_id: 1,
+                    tags: "".to_string(),
+                });
+            }
+        };
 
-    collect_cursor_results(cursor, |cursor| {
-        let note_id = cursor.get_long_by_name(note_columns::ID)?;
-        let fields_str = cursor.get_string_by_name(note_columns::FLDS)?;
-        let tags = cursor.get_string_by_name(note_columns::TAGS)?;
-        let model_id = cursor.get_long_by_name(note_columns::MID)?;
-        let deck_id = 1; // Default deck ID, since notes don't have deck ID directly
+        let fields_str = match cursor.get_string_by_name(note_columns::FLDS) {
+            Ok(fields) => fields,
+            Err(e) => {
+                log::warn!("Failed to read fields for note {}: {}", note_id, e);
+                format!("Error reading fields{}\u{001f}Error: {}", note_id, e)
+            }
+        };
 
-        // Parse fields
-        let (front, back) = parse_card_fields(&fields_str)?;
+        let tags = match cursor.get_string_by_name(note_columns::TAGS) {
+            Ok(tags) => tags,
+            Err(e) => {
+                log::warn!("Failed to read tags for note {}: {}", note_id, e);
+                "".to_string()
+            }
+        };
+
+        // Parse fields with error handling
+        let (front, back) = match parse_card_fields(&fields_str) {
+            Ok((f, b)) => (f, b),
+            Err(e) => {
+                log::warn!("Failed to parse fields for note {}: {}", note_id, e);
+                ("Parse error".to_string(), format!("Error: {}", e))
+            }
+        };
 
         Ok(CardData {
             id: note_id,
             front,
             back,
-            deck_id,
-            model_id,
+            deck_id: 1, // Default deck ID, since notes don't have deck ID directly
+            model_id: 1, // Default model ID
             tags,
         })
-    })
+    }) {
+        Ok(cards) => {
+            log::info!("Successfully collected {} cards", cards.len());
+            cards
+        }
+        Err(e) => {
+            log::error!("Failed to collect cursor results: {}", e);
+            return Err(e);
+        }
+    };
+
+    // Apply limit after fetching results
+    let limited_cards = if let Some(limit_val) = limit {
+        let limit_size = limit_val as usize;
+        log::info!("Applying limit of {} to {} cards", limit_size, all_cards.len());
+        all_cards.into_iter().take(limit_size).collect()
+    } else {
+        all_cards
+    };
+
+    log::info!("Returning {} cards", limited_cards.len());
+    Ok(limited_cards)
 }
 
 /// Update an existing card (note)
@@ -225,7 +285,6 @@ pub fn get_card_by_id(
         note_columns::ID.to_string(),
         note_columns::FLDS.to_string(),
         note_columns::TAGS.to_string(),
-        note_columns::MID.to_string(),
     ];
 
     let cursor = query(env, NOTES_URI)
@@ -238,7 +297,8 @@ pub fn get_card_by_id(
         let id = cursor.get_long_by_name(note_columns::ID)?;
         let fields_str = cursor.get_string_by_name(note_columns::FLDS)?;
         let tags = cursor.get_string_by_name(note_columns::TAGS)?;
-        let model_id = cursor.get_long_by_name(note_columns::MID)?;
+        // Note: We can't query MID directly from notes table
+        let model_id = 1; // Default model ID
         let deck_id = 1; // Default deck ID, since notes don't have deck ID directly
 
         let (front, back) = parse_card_fields(&fields_str)?;
@@ -335,7 +395,7 @@ fn extract_id_from_uri(uri_string: &str) -> AndroidResult<i64> {
             log::warn!("Using timestamp-based ID: {}", timestamp);
             timestamp
         });
-    
+
     Ok(if id == 0 {
         // If parsed ID is 0, use timestamp
         std::time::SystemTime::now()

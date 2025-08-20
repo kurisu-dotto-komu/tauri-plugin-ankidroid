@@ -11,10 +11,13 @@ pub struct SafeJNIEnv<'local> {
 
 impl<'local> Clone for SafeJNIEnv<'local> {
     fn clone(&self) -> Self {
-        // JNIEnv doesn't implement Clone, but we can create a new one from the JavaVM
-        // This is safe because JNIEnv is just a wrapper around a pointer
+        // Create a new SafeJNIEnv with a copy of the JNIEnv reference
+        // This is safe because JNIEnv is Copy when the underlying pointer is valid
         Self {
-            env: unsafe { std::mem::transmute_copy(&self.env) },
+            env: unsafe {
+                // Use ptr::read to create a bitwise copy of the JNIEnv
+                std::ptr::read(&self.env as *const JNIEnv<'local>)
+            },
         }
     }
 }
@@ -286,33 +289,66 @@ impl<'local> ContentValuesBuilder<'local> {
 /// Helper function to get Android context and JavaVM
 pub fn get_android_context() -> AndroidResult<(JavaVM, JObject<'static>)> {
     let ctx = ndk_context::android_context();
-    
+
     // Validate that we have a valid context
     if ctx.vm().is_null() {
-        return Err(AndroidError::ValidationError("JavaVM is null - Android context not initialized".to_string()));
+        return Err(AndroidError::ValidationError(
+            "JavaVM is null - Android context not initialized".to_string(),
+        ));
     }
-    
+
     if ctx.context().is_null() {
-        return Err(AndroidError::ValidationError("Activity context is null - Android context not initialized".to_string()));
+        return Err(AndroidError::ValidationError(
+            "Activity context is null - Android context not initialized".to_string(),
+        ));
     }
-    
+
     let vm = unsafe { JavaVM::from_raw(ctx.vm().cast()) }.map_err(AndroidError::from)?;
     let activity = unsafe { JObject::from_raw(ctx.context() as *mut _) };
     Ok((vm, activity))
 }
 
+/// RAII guard for thread attachment to JavaVM
+pub struct AttachGuard {
+    vm: JavaVM,
+}
+
+impl AttachGuard {
+    /// Create a new AttachGuard and attach the current thread
+    pub fn new() -> AndroidResult<(Self, JNIEnv<'static>)> {
+        let (vm, _) = get_android_context()?;
+        let attach_guard = vm.attach_current_thread().map_err(AndroidError::from)?;
+        
+        // Extract the JNIEnv from the AttachGuard using unsafe pointer manipulation
+        // This is safe because we ensure the thread stays attached via our own guard
+        let env_ptr = attach_guard.deref() as *const JNIEnv<'_>;
+        let static_env = unsafe { std::ptr::read(env_ptr) };
+        let static_env = unsafe { std::mem::transmute::<JNIEnv<'_>, JNIEnv<'static>>(static_env) };
+        
+        // Forget the original attach guard so it doesn't detach
+        std::mem::forget(attach_guard);
+        
+        Ok((Self { vm }, static_env))
+    }
+}
+
+impl Drop for AttachGuard {
+    fn drop(&mut self) {
+        // Detach the thread when the guard is dropped
+        // Ignore errors since we can't propagate them from Drop
+        unsafe {
+            let _ = self.vm.detach_current_thread();
+        }
+    }
+}
+
 /// Helper function to attach current thread to JavaVM
 /// Returns a JNIEnv that's valid for the current thread
 pub fn attach_current_thread() -> AndroidResult<JNIEnv<'static>> {
-    let (vm, _) = get_android_context()?;
-    // attach_current_thread returns an AttachGuard which derefs to JNIEnv
-    // We need to leak the guard to get a 'static lifetime
-    let guard = vm.attach_current_thread().map_err(AndroidError::from)?;
-    // Leak the guard to keep it alive
-    // This is safe because the thread attachment lasts for the thread's lifetime
-    let leaked_guard = Box::leak(Box::new(guard));
-    // Use transmute_copy to copy the JNIEnv with a 'static lifetime
-    let env = unsafe { std::mem::transmute_copy::<JNIEnv<'_>, JNIEnv<'static>>(leaked_guard.deref()) };
+    let (guard, env) = AttachGuard::new()?;
+    // Leak the guard to keep the thread attached
+    // This is intentional for backwards compatibility
+    std::mem::forget(guard);
     Ok(env)
 }
 
@@ -323,9 +359,11 @@ pub fn get_content_resolver<'local>(
 ) -> AndroidResult<JObject<'local>> {
     // Validate the activity is not null
     if activity.is_null() {
-        return Err(AndroidError::ValidationError("Activity is null when getting ContentResolver".to_string()));
+        return Err(AndroidError::ValidationError(
+            "Activity is null when getting ContentResolver".to_string(),
+        ));
     }
-    
+
     let result = env
         .env_mut()
         .call_method(
@@ -337,11 +375,13 @@ pub fn get_content_resolver<'local>(
         .check_exception(env.env_mut())?;
 
     let content_resolver = result.l().map_err(AndroidError::from)?;
-    
+
     if content_resolver.is_null() {
-        return Err(AndroidError::ValidationError("ContentResolver is null".to_string()));
+        return Err(AndroidError::ValidationError(
+            "ContentResolver is null".to_string(),
+        ));
     }
-    
+
     Ok(content_resolver)
 }
 

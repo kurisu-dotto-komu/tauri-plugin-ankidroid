@@ -112,7 +112,7 @@ impl<'local> ContentProviderQuery<'local> {
         } else {
             None
         };
-        
+
         // Create JValue references after all objects are created
         let null_obj = JObject::null();
         let projection_array = if let Some(ref obj) = projection_obj {
@@ -191,10 +191,7 @@ impl<'local> ContentProviderInsert<'local> {
                 &content_resolver,
                 "insert",
                 "(Landroid/net/Uri;Landroid/content/ContentValues;)Landroid/net/Uri;",
-                &[
-                    JValue::Object(&uri_obj),
-                    JValue::Object(&content_values),
-                ],
+                &[JValue::Object(&uri_obj), JValue::Object(&content_values)],
             )
             .check_exception(self.env.env())?;
 
@@ -265,14 +262,14 @@ impl<'local> ContentProviderUpdate<'local> {
 
         // Prepare all objects first to ensure proper lifetime
         let null_obj = JObject::null();
-        
+
         // Create selection string if needed
         let sel_string = if let Some(sel) = &self.selection {
             Some(self.env.new_string_checked(sel)?)
         } else {
             None
         };
-        
+
         // Create selection args array if needed
         let selection_args_array_obj = if let Some(args) = &self.selection_args {
             let string_class = self.env.find_class_checked("java/lang/String")?;
@@ -293,14 +290,14 @@ impl<'local> ContentProviderUpdate<'local> {
         } else {
             None
         };
-        
+
         // Now create JValues with proper references
         // JString implements AsRef<JObject> so we can use it directly
         let selection_obj = match sel_string.as_ref() {
             Some(s) => JValue::Object(s.as_ref()),
             None => JValue::Object(&null_obj),
         };
-        
+
         let selection_args_array = match selection_args_array_obj.as_ref() {
             Some(a) => JValue::Object(a),
             None => JValue::Object(&null_obj),
@@ -360,14 +357,14 @@ impl<'local> ContentProviderDelete<'local> {
 
         // Prepare all objects first to ensure proper lifetime
         let null_obj = JObject::null();
-        
+
         // Create selection string if needed
         let sel_string = if let Some(sel) = &self.selection {
             Some(self.env.new_string_checked(sel)?)
         } else {
             None
         };
-        
+
         // Create selection args array if needed
         let selection_args_array_obj = if let Some(args) = &self.selection_args {
             let string_class = self.env.find_class_checked("java/lang/String")?;
@@ -388,14 +385,14 @@ impl<'local> ContentProviderDelete<'local> {
         } else {
             None
         };
-        
+
         // Now create JValues with proper references
         // JString implements AsRef<JObject> so we can use it directly
         let selection_obj = match sel_string.as_ref() {
             Some(s) => JValue::Object(s.as_ref()),
             None => JValue::Object(&null_obj),
         };
-        
+
         let selection_args_array = match selection_args_array_obj.as_ref() {
             Some(a) => JValue::Object(a),
             None => JValue::Object(&null_obj),

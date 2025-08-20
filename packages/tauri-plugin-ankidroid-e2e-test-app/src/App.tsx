@@ -85,7 +85,6 @@ function App() {
       // Find deck name from ID
       const selectedDeck = decks.find(d => d.id === selectedDeckId);
       const deckName = selectedDeck ? selectedDeck.name : 'Default';
-      alert(JSON.stringify({ front, back, deckId: selectedDeckId, deckName, tags }));
       const result = await createCard(front, back, deckName, tags);
       console.log('🟢 createCard result:', result);
 

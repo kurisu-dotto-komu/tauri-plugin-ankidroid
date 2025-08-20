@@ -88,7 +88,25 @@ pub fn create_deck_if_not_exists(
         return Ok(existing_id);
     }
 
-    // Try to create the deck
+    // Double check by listing all decks to make sure we didn't miss it
+    let env_for_list = env.clone();
+    match list_decks(env_for_list, activity) {
+        Ok(decks) => {
+            log::info!("Found {} total decks", decks.len());
+            for (id, name) in &decks {
+                if name.eq_ignore_ascii_case(deck_name) {
+                    log::info!("Found existing deck '{}' with ID {} (case insensitive match)", name, id);
+                    return Ok(*id);
+                }
+            }
+        }
+        Err(e) => {
+            log::warn!("Failed to list decks: {}", e);
+        }
+    }
+
+    // Try to create the deck only if we're absolutely sure it doesn't exist
+    log::info!("Deck '{}' does not exist, attempting to create it", deck_name);
     let env_for_create = env.clone();
     match create_deck(env_for_create, activity, deck_name) {
         Ok(deck_id) => {
@@ -96,16 +114,25 @@ pub fn create_deck_if_not_exists(
             Ok(deck_id)
         }
         Err(e) => {
-            log::warn!("Failed to create deck '{}': {}", deck_name, e);
+            log::error!("Failed to create deck '{}': {}", deck_name, e);
 
-            // Check one more time in case another process created it
-            if let Some(existing_id) = find_deck_id_by_name(env, activity, deck_name)? {
-                log::info!(
-                    "Deck '{}' was created by another process with ID: {}",
-                    deck_name,
-                    existing_id
-                );
-                return Ok(existing_id);
+            // Check if this is a "deck already exists" error
+            let error_message = e.to_string();
+            if error_message.contains("already exists") || error_message.contains("Deck name already exists") {
+                log::info!("Deck '{}' already exists, searching for it again", deck_name);
+                // Check one more time in case another process created it
+                let env_for_find = env.clone();
+                if let Some(existing_id) = find_deck_id_by_name(env_for_find, activity, deck_name)? {
+                    log::info!(
+                        "Found existing deck '{}' with ID: {}",
+                        deck_name,
+                        existing_id
+                    );
+                    return Ok(existing_id);
+                } else {
+                    // If we still can't find it, fall back to default deck
+                    log::warn!("Could not find deck '{}' after creation failure, using default deck", deck_name);
+                }
             }
 
             // Fall back to default deck
@@ -138,32 +165,37 @@ pub fn create_deck(env: SafeJNIEnv, activity: &JObject, deck_name: &str) -> Andr
 pub fn list_decks(env: SafeJNIEnv, activity: &JObject) -> AndroidResult<Vec<(i64, String)>> {
     log::info!("Listing all available decks");
 
-    let projection = vec![
-        deck_columns::DID.to_string(),
-        deck_columns::DECK_ID.to_string(),
-        deck_columns::NAME.to_string(),
-        deck_columns::DECK_NAME.to_string(),
-    ];
-
+    // Try querying without any projection first to see what columns are available
     let cursor = query(env, DECKS_URI)
-        .projection(projection)
-        .sort_order(format!("{} ASC", deck_columns::NAME))
         .execute(activity)?;
 
     collect_cursor_results(cursor, |cursor| {
-        // Try both possible column names for deck ID
+        // Try to get column count and names for debugging
+        log::info!("Cursor column count: {}", cursor.get_column_count().unwrap_or(0));
+        
+        // Try different possible column name combinations
         let deck_id = cursor
-            .get_long_by_name(deck_columns::DID)
+            .get_long_by_name("_id")  // Most common Android ID column
+            .or_else(|_| cursor.get_long_by_name(deck_columns::DID))
             .or_else(|_| cursor.get_long_by_name(deck_columns::DECK_ID))
-            .unwrap_or(0);
+            .unwrap_or_else(|e| {
+                log::warn!("Could not get deck ID: {}", e);
+                0
+            });
 
-        // Try both possible column names for deck name
+        // Try different possible column names for deck name
         let name = cursor
-            .get_string_by_name(deck_columns::NAME)
+            .get_string_by_name("name")  // Simple 'name' column
+            .or_else(|_| cursor.get_string_by_name(deck_columns::NAME))
             .or_else(|_| cursor.get_string_by_name(deck_columns::DECK_NAME))
-            .unwrap_or_default();
+            .or_else(|_| cursor.get_string_by_name("deckname"))  // Try different variations
+            .or_else(|_| cursor.get_string_by_name("deck_name_json"))  // AnkiDroid might use JSON
+            .unwrap_or_else(|e| {
+                log::warn!("Could not get deck name: {}", e);
+                format!("Deck {}", deck_id)  // Fallback to show deck ID
+            });
 
-        log::debug!("Found deck: {} (ID: {})", name, deck_id);
+        log::info!("Found deck: '{}' (ID: {})", name, deck_id);
         Ok((deck_id, name))
     })
 }

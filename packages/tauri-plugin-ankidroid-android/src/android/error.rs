@@ -47,6 +47,18 @@ pub enum AndroidError {
 
     #[error("Local reference limit exceeded")]
     LocalReferenceLimitExceeded,
+
+    #[error("AnkiDroid not available: {0}")]
+    AnkiDroidNotAvailable(String),
+
+    #[error("Media operation failed: {0}")]
+    MediaError(String),
+
+    #[error("Sync operation failed: {0}")]
+    SyncError(String),
+
+    #[error("Card operation failed: {0}")]
+    CardOperationError(String),
 }
 
 impl From<AndroidError> for String {

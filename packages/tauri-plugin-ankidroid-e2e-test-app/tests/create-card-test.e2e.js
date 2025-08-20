@@ -49,15 +49,24 @@ describe('Create Card E2E Test', () => {
   });
 
   it('should fill in the card creation form', async () => {
+    // Create unique timestamp for this test run
+    const timestamp = Date.now();
+    const uniqueFront = `E2E Test Question ${timestamp}`;
+    const uniqueBack = `E2E Test Answer ${timestamp}`;
+    
+    // Store the values globally so other tests can use them
+    global.testCardFront = uniqueFront;
+    global.testCardBack = uniqueBack;
+    
     // Fill in the front field
     const frontInput = await $('#front');
     await frontInput.clearValue();
-    await frontInput.setValue('E2E Test Question');
+    await frontInput.setValue(uniqueFront);
     
     // Fill in the back field
     const backInput = await $('#back');
     await backInput.clearValue();
-    await backInput.setValue('E2E Test Answer');
+    await backInput.setValue(uniqueBack);
     
     // Select the first available deck
     const deckSelector = await $('#deck');
@@ -90,8 +99,8 @@ describe('Create Card E2E Test', () => {
     const backValue = await backInput.getValue();
     const tagsValue = await tagsInput.getValue();
     
-    expect(frontValue).to.equal('E2E Test Question');
-    expect(backValue).to.equal('E2E Test Answer');
+    expect(frontValue).to.equal(uniqueFront);
+    expect(backValue).to.equal(uniqueBack);
     expect(tagsValue).to.equal('e2e-test automated');
     
     console.log('✅ Form filled successfully');
@@ -179,19 +188,22 @@ describe('Create Card E2E Test', () => {
     const cardItems = await $$('.card-item');
     console.log(`Found ${cardItems.length} cards in the list`);
     
-    // Look for our test card
+    // Look for our test card using the unique values
+    const expectedFront = global.testCardFront || 'E2E Test Question';
+    const expectedBack = global.testCardBack || 'E2E Test Answer';
+    
     let foundTestCard = false;
     for (const card of cardItems) {
       const frontText = await card.$('.card-front').getText().catch(() => '');
       console.log(`Checking card: "${frontText}"`);
       
-      if (frontText.includes('E2E Test Question')) {
+      if (frontText.includes(expectedFront)) {
         foundTestCard = true;
         console.log('✅ Found our E2E test card in the list!');
         
         // Verify the back text as well
         const backText = await card.$('.card-back').getText().catch(() => '');
-        expect(backText).to.include('E2E Test Answer');
+        expect(backText).to.include(expectedBack);
         console.log('✅ Back text verified');
         
         // Check for tags

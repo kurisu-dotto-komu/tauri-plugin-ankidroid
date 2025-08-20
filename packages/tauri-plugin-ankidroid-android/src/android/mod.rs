@@ -1,3 +1,5 @@
+pub mod api_check;
+pub mod card_management;
 pub mod cards;
 pub mod constants;
 pub mod content_provider;
@@ -5,9 +7,13 @@ pub mod cursor;
 pub mod decks;
 pub mod error;
 pub mod jni_helpers;
+pub mod media;
 pub mod models;
+pub mod sync;
 pub mod validation;
 
+pub use api_check::*;
+pub use card_management::*;
 pub use cards::*;
 pub use constants::*;
 pub use content_provider::*;
@@ -15,5 +21,7 @@ pub use cursor::*;
 pub use decks::*;
 pub use error::*;
 pub use jni_helpers::*;
+pub use media::*;
 pub use models::*;
+pub use sync::*;
 pub use validation::*;
