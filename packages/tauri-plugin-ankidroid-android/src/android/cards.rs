@@ -1,3 +1,4 @@
+use crate::android::add_content_api::AddContentApi;
 use crate::android::constants::{note_columns, FIELD_SEPARATOR, NOTES_URI};
 use crate::android::content_provider::{delete, insert, query, update};
 use crate::android::cursor::collect_cursor_results;
@@ -17,45 +18,187 @@ pub fn create_card(
     tags: Option<&str>,
 ) -> AndroidResult<i64> {
     log::info!(
-        "Creating card - Front: {}, Back: {}, Deck: {:?}",
+        "🔄 START CREATE_CARD - Front: '{}', Back: '{}', Deck: {:?}, Tags: {:?}",
         front,
         back,
-        deck_name
+        deck_name,
+        tags
     );
 
-    // Validate inputs
-    validate_card_fields(front, back)?;
+    // Clear any pending JNI exceptions at the start
+    if env.env().exception_check().unwrap_or(false) {
+        log::warn!("🔥 Clearing pending JNI exception at start of create_card");
+        env.env().exception_clear().ok();
+    }
 
-    // Get or create deck
-    let deck_id = get_or_create_deck_id(&mut env, activity, deck_name)?;
-    log::info!("Using deck ID: {}", deck_id);
+    // Validate inputs
+    log::info!("📝 Validating card fields...");
+    if let Err(e) = validate_card_fields(front, back) {
+        log::error!("❌ Card field validation failed: {}", e);
+        return Err(e);
+    }
+    log::info!("✅ Card fields validated successfully");
+
+    // Get or create deck - AVOID cloning env here to prevent reference issues
+    log::info!("🏗️ Getting or creating deck: {:?}", deck_name);
+    let deck_id = match get_or_create_deck_id(&mut env, activity, deck_name) {
+        Ok(id) => {
+            log::info!("✅ Deck operation successful - using deck ID: {}", id);
+            id
+        }
+        Err(e) => {
+            log::error!("❌ CRITICAL: Deck operation failed with error: {}", e);
+            log::error!("❌ Error type: {:?}", e);
+            
+            // Check for and clear any JNI exceptions
+            if env.env().exception_check().unwrap_or(false) {
+                log::error!("🔥 JNI EXCEPTION DETECTED during deck operation!");
+                env.env().exception_describe().ok();
+                env.env().exception_clear().ok();
+            }
+            return Err(e);
+        }
+    };
 
     // Find Basic model
-    let model_id = find_basic_model_id(&mut env, activity)?;
-    log::info!("Using model ID: {}", model_id);
+    log::info!("🔍 Finding Basic model...");
+    let model_id = match find_basic_model_id(&mut env, activity) {
+        Ok(id) => {
+            log::info!("✅ Found Basic model ID: {}", id);
+            id
+        }
+        Err(e) => {
+            log::error!("❌ Failed to find Basic model: {}", e);
+            // Clear any exceptions before returning
+            if env.env().exception_check().unwrap_or(false) {
+                env.env().exception_clear().ok();
+            }
+            return Err(e);
+        }
+    };
 
     // Validate model is suitable for cards
-    validate_model_for_cards(&mut env, activity, model_id)?;
+    log::info!("🔍 Validating model for cards...");
+    if let Err(e) = validate_model_for_cards(&mut env, activity, model_id) {
+        log::error!("❌ Model validation failed: {}", e);
+        // Clear any exceptions before returning
+        if env.env().exception_check().unwrap_or(false) {
+            env.env().exception_clear().ok();
+        }
+        return Err(e);
+    }
+    log::info!("✅ Model validated successfully");
 
-    // Format fields with proper separator
+    // Try direct ContentProvider approach with mid in ContentValues
+    log::info!("🎯 Attempting to create note using direct ContentProvider with mid...");
+    
+    // Format fields with proper separator (0x1f)
     let fields = format!("{}{}{}", front, FIELD_SEPARATOR, back);
     let tags_str = tags.unwrap_or("").trim();
-
-    // Create ContentValues for the note
-    // IMPORTANT: Do NOT include 'mid' in ContentValues - it causes "Queue 'mid' is unknown" error
-    // The model ID is set through the deck's default model
+    log::info!("📝 Formatted fields: '{}', tags: '{}'", fields, tags_str);
+    
+    // Create ContentValues INCLUDING the model ID (mid)
+    log::info!("🏗️ Creating ContentValues with mid={}...", model_id);
     let mut env_for_values = env.clone();
-    let values = ContentValuesBuilder::new(&mut env_for_values)?
-        .put_string(note_columns::FLDS, &fields)?
-        .put_string(note_columns::TAGS, tags_str)?;
+    let values_builder = match ContentValuesBuilder::new(&mut env_for_values) {
+        Ok(mut builder) => {
+            log::info!("✅ ContentValuesBuilder created");
+            
+            // IMPORTANT: Include mid (model ID) in the ContentValues
+            builder = builder.put_long(note_columns::MID, model_id)?;
+            log::info!("✅ Added mid={} to ContentValues", model_id);
+            
+            // Add the fields
+            builder = builder.put_string(note_columns::FLDS, &fields)?;
+            log::info!("✅ Added flds to ContentValues");
+            
+            // Add tags if provided
+            if !tags_str.is_empty() {
+                builder = builder.put_string(note_columns::TAGS, tags_str)?;
+                log::info!("✅ Added tags to ContentValues");
+            }
+            
+            // Add other required fields that might be needed
+            let timestamp = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_secs() as i64)
+                .unwrap_or(0);
+            
+            builder = builder.put_long(note_columns::MOD, timestamp)?;
+            log::info!("✅ Added mod (timestamp) to ContentValues");
+            
+            // guid is usually generated by AnkiDroid, but we can provide one
+            let guid = format!("tpa{}", timestamp); // tauri-plugin-ankidroid prefix
+            builder = builder.put_string(note_columns::GUID, &guid)?;
+            log::info!("✅ Added guid to ContentValues");
+            
+            // sfld (sort field) is usually the first field
+            builder = builder.put_string(note_columns::SFLD, front)?;
+            log::info!("✅ Added sfld to ContentValues");
+            
+            // usn (update sequence number) - 0 for new notes
+            builder = builder.put_int(note_columns::USQN, 0)?;
+            log::info!("✅ Added usn to ContentValues");
+            
+            // flags - default to 0
+            builder = builder.put_int(note_columns::FLAGS, 0)?;
+            log::info!("✅ Added flags to ContentValues");
+            
+            // data - empty string for now
+            builder = builder.put_string(note_columns::DATA, "")?;
+            log::info!("✅ Added data to ContentValues");
+            
+            builder
+        }
+        Err(e) => {
+            log::error!("❌ Failed to create ContentValuesBuilder: {}", e);
+            return Err(e);
+        }
+    };
 
     // Insert the note
-    let result_uri = insert(env, NOTES_URI).execute(activity, values)?;
+    log::info!("💾 Inserting note into AnkiDroid...");
+    log::info!("✅ ContentValues built successfully");
+    let env_for_insert = env.clone();
+    let result_uri = match insert(env_for_insert, NOTES_URI).execute(activity, values_builder) {
+        Ok(uri) => {
+            log::info!("✅ Note inserted successfully, URI: {}", uri);
+            uri
+        }
+        Err(e) => {
+            log::error!("❌ CRITICAL: Note insertion failed: {}", e);
+            log::error!("❌ Error details: {:?}", e);
+            // Clear any exceptions before returning
+            if env.env().exception_check().unwrap_or(false) {
+                log::error!("🔥 JNI exception during insert operation");
+                env.env().exception_describe().ok();
+                env.env().exception_clear().ok();
+            }
+            return Err(e);
+        }
+    };
 
     // Extract note ID from URI
-    let note_id = extract_id_from_uri(&result_uri)?;
-    log::info!("Created card with note ID: {}", note_id);
+    log::info!("🔍 Extracting note ID from URI...");
+    let note_id = match extract_id_from_uri(&result_uri) {
+        Ok(id) => {
+            log::info!("✅ Successfully extracted note ID: {}", id);
+            id
+        }
+        Err(e) => {
+            log::error!("❌ Failed to extract note ID from URI '{}': {}", result_uri, e);
+            return Err(e);
+        }
+    };
 
+    // Final exception check before success
+    if env.env().exception_check().unwrap_or(false) {
+        log::error!("🔥 JNI exception detected at end of create_card - clearing");
+        env.env().exception_describe().ok();
+        env.env().exception_clear().ok();
+    }
+
+    log::info!("🎉 CREATE_CARD COMPLETED SUCCESSFULLY - Note ID: {}", note_id);
     Ok(note_id)
 }
 

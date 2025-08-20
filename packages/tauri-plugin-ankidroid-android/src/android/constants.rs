@@ -20,7 +20,7 @@ pub mod note_columns {
     pub const GUID: &str = "guid";
     pub const MID: &str = "mid"; // Model ID
     pub const MOD: &str = "mod"; // Modification time
-    pub const USQN: &str = "usqn"; // Update sequence number
+    pub const USQN: &str = "usn"; // Update sequence number (not usqn)
     pub const TAGS: &str = "tags";
     pub const FLDS: &str = "flds"; // Fields (separated by 0x1f)
     pub const FLAGS: &str = "flags";

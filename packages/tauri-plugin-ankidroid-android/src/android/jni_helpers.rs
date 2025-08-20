@@ -197,13 +197,13 @@ impl StringHelper {
 
 /// ContentValues helper for building Android ContentValues objects
 pub struct ContentValuesBuilder<'local> {
-    env: &'local mut SafeJNIEnv<'local>,
+    env: SafeJNIEnv<'local>,
     content_values: JObject<'local>,
 }
 
 impl<'local> ContentValuesBuilder<'local> {
     /// Create a new ContentValues builder
-    pub fn new(env: &'local mut SafeJNIEnv<'local>) -> AndroidResult<Self> {
+    pub fn new(env: &mut SafeJNIEnv<'local>) -> AndroidResult<Self> {
         let content_values_class = env.find_class_checked("android/content/ContentValues")?;
         let content_values = env
             .env()
@@ -211,7 +211,7 @@ impl<'local> ContentValuesBuilder<'local> {
             .check_exception(env.env_mut())?;
 
         Ok(Self {
-            env,
+            env: env.clone(),
             content_values,
         })
     }

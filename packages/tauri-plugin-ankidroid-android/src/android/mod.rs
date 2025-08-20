@@ -1,3 +1,4 @@
+pub mod add_content_api;
 pub mod api_check;
 pub mod card_management;
 pub mod cards;

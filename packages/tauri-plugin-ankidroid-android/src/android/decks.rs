@@ -1,3 +1,4 @@
+use crate::android::add_content_api::AddContentApi;
 use crate::android::constants::{deck_columns, DECKS_URI, DEFAULT_DECK_ID};
 use crate::android::content_provider::{insert, query};
 use crate::android::cursor::collect_cursor_results;
@@ -75,81 +76,141 @@ pub fn create_deck_if_not_exists(
     activity: &JObject,
     deck_name: &str,
 ) -> AndroidResult<i64> {
-    log::info!("Creating deck if not exists: {}", deck_name);
+    log::info!("🏗️ CREATE_DECK_IF_NOT_EXISTS: '{}'", deck_name);
 
     // First check if deck already exists
+    log::info!("🔍 Step 1: Checking if deck already exists...");
     let env_clone = env.clone();
-    if let Some(existing_id) = find_deck_id_by_name(env_clone, activity, deck_name)? {
-        log::info!(
-            "Deck '{}' already exists with ID: {}",
-            deck_name,
-            existing_id
-        );
-        return Ok(existing_id);
+    match find_deck_id_by_name(env_clone, activity, deck_name) {
+        Ok(Some(existing_id)) => {
+            log::info!("✅ Deck '{}' already exists with ID: {}", deck_name, existing_id);
+            return Ok(existing_id);
+        }
+        Ok(None) => {
+            log::info!("🔍 Deck '{}' not found in initial search", deck_name);
+        }
+        Err(e) => {
+            log::error!("❌ Error during initial deck search: {}", e);
+            // Continue with creation attempt
+        }
     }
 
     // Double check by listing all decks to make sure we didn't miss it
+    log::info!("🔍 Step 2: Double-checking by listing all decks...");
     let env_for_list = env.clone();
     match list_decks(env_for_list, activity) {
         Ok(decks) => {
-            log::info!("Found {} total decks", decks.len());
+            log::info!("✅ Found {} total decks", decks.len());
             for (id, name) in &decks {
+                log::info!("  - Deck: '{}' (ID: {})", name, id);
                 if name.eq_ignore_ascii_case(deck_name) {
-                    log::info!("Found existing deck '{}' with ID {} (case insensitive match)", name, id);
+                    log::info!("✅ Found existing deck '{}' with ID {} (case insensitive match)", name, id);
                     return Ok(*id);
                 }
             }
+            log::info!("🔍 No case-insensitive match found for '{}'", deck_name);
         }
         Err(e) => {
-            log::warn!("Failed to list decks: {}", e);
+            log::error!("❌ Failed to list decks during double-check: {}", e);
         }
     }
 
     // Try to create the deck only if we're absolutely sure it doesn't exist
-    log::info!("Deck '{}' does not exist, attempting to create it", deck_name);
+    log::info!("🏗️ Step 3: Deck '{}' does not exist, attempting to create it", deck_name);
     let env_for_create = env.clone();
+    
+    // Check for JNI exceptions before creation attempt
+    if env.env().exception_check().unwrap_or(false) {
+        log::error!("🔥 JNI EXCEPTION PRESENT before deck creation attempt!");
+        env.env().exception_describe().ok();
+        env.env().exception_clear().ok();
+    }
+    
     match create_deck(env_for_create, activity, deck_name) {
         Ok(deck_id) => {
-            log::info!("Created new deck '{}' with ID: {}", deck_name, deck_id);
+            log::info!("✅ Created new deck '{}' with ID: {}", deck_name, deck_id);
             Ok(deck_id)
         }
         Err(e) => {
-            log::error!("Failed to create deck '{}': {}", deck_name, e);
+            log::error!("❌ CRITICAL: Failed to create deck '{}': {}", deck_name, e);
+            log::error!("❌ Error details: {:?}", e);
+
+            // Check for JNI exceptions after creation failure
+            if env.env().exception_check().unwrap_or(false) {
+                log::error!("🔥 JNI EXCEPTION DETECTED after deck creation failure!");
+                if let Ok(exception) = env.env().exception_occurred() {
+                    log::error!("🔥 Exception object found: {}", exception.as_raw() as usize);
+                    env.env().exception_describe().ok();
+                    env.env().exception_clear().ok();
+                }
+            }
 
             // Check if this is a "deck already exists" error
             let error_message = e.to_string();
             if error_message.contains("already exists") || error_message.contains("Deck name already exists") {
-                log::info!("Deck '{}' already exists, searching for it again", deck_name);
+                log::info!("🔄 Deck '{}' seems to already exist (race condition?), searching again...", deck_name);
                 // Check one more time in case another process created it
                 let env_for_find = env.clone();
-                if let Some(existing_id) = find_deck_id_by_name(env_for_find, activity, deck_name)? {
-                    log::info!(
-                        "Found existing deck '{}' with ID: {}",
-                        deck_name,
-                        existing_id
-                    );
-                    return Ok(existing_id);
-                } else {
-                    // If we still can't find it, fall back to default deck
-                    log::warn!("Could not find deck '{}' after creation failure, using default deck", deck_name);
+                match find_deck_id_by_name(env_for_find, activity, deck_name) {
+                    Ok(Some(existing_id)) => {
+                        log::info!("✅ Found existing deck '{}' with ID: {} after creation failure", deck_name, existing_id);
+                        return Ok(existing_id);
+                    }
+                    Ok(None) => {
+                        log::error!("❌ Still could not find deck '{}' after creation failure", deck_name);
+                    }
+                    Err(find_error) => {
+                        log::error!("❌ Error searching for deck after creation failure: {}", find_error);
+                    }
                 }
             }
 
-            // Fall back to default deck
-            log::warn!("Using default deck ID: {}", DEFAULT_DECK_ID);
-            Ok(DEFAULT_DECK_ID)
+            // For automated testing, let's NOT fall back to default deck immediately
+            // Instead, propagate the error so we can see what's really happening
+            log::error!("🔥 PROPAGATING ERROR instead of using default deck to debug the issue");
+            return Err(e);
         }
     }
 }
 
 /// Create a new deck
-pub fn create_deck(env: SafeJNIEnv, activity: &JObject, deck_name: &str) -> AndroidResult<i64> {
+pub fn create_deck(mut env: SafeJNIEnv, activity: &JObject, deck_name: &str) -> AndroidResult<i64> {
     log::info!("Creating new deck: {}", deck_name);
 
     if deck_name.trim().is_empty() {
         return Err(AndroidError::validation_error("Deck name cannot be empty"));
     }
 
+    // Try to use AddContentApi first
+    if AddContentApi::is_available(&mut env, activity) {
+        log::info!("🎯 Using AddContentApi to create deck...");
+        let mut api = match AddContentApi::new(env.clone(), activity) {
+            Ok(api) => api,
+            Err(e) => {
+                log::warn!("⚠️ Failed to create AddContentApi instance: {}, falling back to ContentProvider", e);
+                // Fall through to ContentProvider method
+                let mut env_for_values = env.clone();
+                let values = ContentValuesBuilder::new(&mut env_for_values)?
+                    .put_string(deck_columns::DECK_NAME, deck_name)?
+                    .put_string(deck_columns::NAME, deck_name)?;
+                let result_uri = insert(env, DECKS_URI).execute(activity, values)?;
+                return extract_id_from_uri(&result_uri);
+            }
+        };
+        
+        match api.add_new_deck(deck_name) {
+            Ok(deck_id) => {
+                log::info!("✅ Deck created via AddContentApi with ID: {}", deck_id);
+                return Ok(deck_id);
+            }
+            Err(e) => {
+                log::warn!("⚠️ Failed to create deck via AddContentApi: {}, falling back to ContentProvider", e);
+            }
+        }
+    }
+
+    // Fall back to ContentProvider method
+    log::info!("Using ContentProvider to create deck...");
     let mut env_for_values = env.clone();
     let values = ContentValuesBuilder::new(&mut env_for_values)?
         .put_string(deck_columns::DECK_NAME, deck_name)?

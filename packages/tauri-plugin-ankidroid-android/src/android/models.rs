@@ -26,7 +26,7 @@ pub fn find_model_id_by_name(
     );
 
     let projection = vec![
-        model_columns::MID.to_string(),
+        "_id".to_string(), // Use "_id" instead of "mid" to avoid "Queue 'mid' is unknown" error
         model_columns::NAME.to_string(),
         model_columns::FLDS.to_string(),
     ];
@@ -37,7 +37,7 @@ pub fn find_model_id_by_name(
         .execute(activity)?;
 
     let models = collect_cursor_results(cursor, |cursor| {
-        let id = cursor.get_long_by_name(model_columns::MID)?;
+        let id = cursor.get_long_by_name("_id")?; // Use "_id" instead of "mid"
         let name = cursor.get_string_by_name(model_columns::NAME)?;
         let fields_json = cursor.get_string_by_name(model_columns::FLDS)?;
 
@@ -148,7 +148,7 @@ pub fn list_models(
     log::info!("Listing all available models");
 
     let projection = vec![
-        model_columns::MID.to_string(),
+        "_id".to_string(), // Use "_id" instead of "mid" to avoid "Queue 'mid' is unknown" error
         model_columns::NAME.to_string(),
         model_columns::FLDS.to_string(),
         model_columns::TYPE.to_string(),
@@ -160,7 +160,7 @@ pub fn list_models(
         .execute(activity)?;
 
     collect_cursor_results(cursor, |cursor| {
-        let id = cursor.get_long_by_name(model_columns::MID)?;
+        let id = cursor.get_long_by_name("_id")?; // Use "_id" instead of "mid"
         let name = cursor.get_string_by_name(model_columns::NAME)?;
         let fields_json = cursor.get_string_by_name(model_columns::FLDS)?;
         let model_type = cursor.get_int_by_name(model_columns::TYPE)?;
@@ -182,8 +182,9 @@ pub fn list_models(
 pub fn model_exists(env: SafeJNIEnv, activity: &JObject, model_id: i64) -> AndroidResult<bool> {
     log::info!("Checking if model exists: {}", model_id);
 
-    let projection = vec![model_columns::MID.to_string()];
-    let selection = format!("{} = ?", model_columns::MID);
+    let projection = vec!["_id".to_string()]; // Use "_id" instead of "mid" to avoid "Queue 'mid' is unknown" error
+    // Use "_id" for selection clauses instead of "mid" to avoid "Queue 'mid' is unknown" error
+    let selection = format!("{} = ?", "_id");
     let selection_args = vec![model_id.to_string()];
 
     let mut cursor = query(env, MODELS_URI)
@@ -209,7 +210,8 @@ pub fn get_model_info(
         model_columns::FLDS.to_string(),
         model_columns::TYPE.to_string(),
     ];
-    let selection = format!("{} = ?", model_columns::MID);
+    // Use "_id" for selection clauses instead of "mid" to avoid "Queue 'mid' is unknown" error
+    let selection = format!("{} = ?", "_id");
     let selection_args = vec![model_id.to_string()];
 
     let cursor = query(env, MODELS_URI)
