@@ -18,6 +18,13 @@ export const config = {
       'appium:ensureWebviewsHavePages': true,
       'appium:nativeWebScreenshot': true,
       'appium:webviewDetails': true,
+      'appium:chromedriverExecutable': undefined,
+      'appium:chromedriverAutodownload': true,
+      'appium:showChromedriverLog': true,
+      'appium:recreateChromeDriverSessions': true,
+      'appium:chromedriverUseSystemExecutable': false,
+      'appium:webviewConnectTimeout': 20000,
+      'appium:webviewDevtoolsPort': 9222,
     },
   ],
   services: [

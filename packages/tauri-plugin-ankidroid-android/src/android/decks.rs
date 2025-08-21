@@ -1,4 +1,4 @@
-use crate::android::add_content_api::AddContentApi;
+// use crate::android::add_content_api::AddContentApi; // Disabled - can't use from external app
 use crate::android::constants::{deck_columns, DECKS_URI, DEFAULT_DECK_ID};
 use crate::android::content_provider::{insert, query};
 use crate::android::cursor::collect_cursor_results;
@@ -181,35 +181,11 @@ pub fn create_deck(mut env: SafeJNIEnv, activity: &JObject, deck_name: &str) -> 
         return Err(AndroidError::validation_error("Deck name cannot be empty"));
     }
 
-    // Try to use AddContentApi first
-    if AddContentApi::is_available(&mut env, activity) {
-        log::info!("🎯 Using AddContentApi to create deck...");
-        let mut api = match AddContentApi::new(env.clone(), activity) {
-            Ok(api) => api,
-            Err(e) => {
-                log::warn!("⚠️ Failed to create AddContentApi instance: {}, falling back to ContentProvider", e);
-                // Fall through to ContentProvider method
-                let mut env_for_values = env.clone();
-                let values = ContentValuesBuilder::new(&mut env_for_values)?
-                    .put_string(deck_columns::DECK_NAME, deck_name)?
-                    .put_string(deck_columns::NAME, deck_name)?;
-                let result_uri = insert(env, DECKS_URI).execute(activity, values)?;
-                return extract_id_from_uri(&result_uri);
-            }
-        };
-        
-        match api.add_new_deck(deck_name) {
-            Ok(deck_id) => {
-                log::info!("✅ Deck created via AddContentApi with ID: {}", deck_id);
-                return Ok(deck_id);
-            }
-            Err(e) => {
-                log::warn!("⚠️ Failed to create deck via AddContentApi: {}, falling back to ContentProvider", e);
-            }
-        }
-    }
-
-    // Fall back to ContentProvider method
+    // Skip AddContentApi for now since it's causing crashes
+    // The AddContentApi class is in AnkiDroid app, not ours, so we can't instantiate it
+    // We'll use ContentProvider directly instead
+    
+    // Use ContentProvider method
     log::info!("Using ContentProvider to create deck...");
     let mut env_for_values = env.clone();
     let values = ContentValuesBuilder::new(&mut env_for_values)?

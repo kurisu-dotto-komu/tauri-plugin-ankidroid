@@ -98,6 +98,9 @@ pub mod jni;
 #[cfg(target_os = "android")]
 pub mod api;
 
+#[cfg(target_os = "android")]
+pub mod extended;
+
 // Re-exports for convenience and public API
 pub use error::{AnkiDroidError, Result};
 pub use models::{
@@ -125,6 +128,9 @@ pub use contract::{
 // Android-specific re-exports
 #[cfg(target_os = "android")]
 pub use api::AnkiDroidApi;
+
+#[cfg(target_os = "android")]
+pub use extended::AnkiDroidApiExtended;
 
 /// Version information for this crate
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");

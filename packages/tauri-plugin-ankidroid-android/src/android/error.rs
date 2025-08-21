@@ -1,4 +1,5 @@
 use thiserror::Error;
+use ankidroid_api_rust::AnkiDroidError;
 
 /// Custom error types for AnkiDroid plugin operations
 #[derive(Error, Debug)]
@@ -64,6 +65,26 @@ pub enum AndroidError {
 impl From<AndroidError> for String {
     fn from(err: AndroidError) -> String {
         err.to_string()
+    }
+}
+
+impl From<AnkiDroidError> for AndroidError {
+    fn from(err: AnkiDroidError) -> Self {
+        match err {
+            AnkiDroidError::AnkiDroidNotAvailable(msg) => AndroidError::AnkiDroidNotAvailable(msg),
+            AnkiDroidError::PermissionDenied(msg) => AndroidError::PermissionDenied(msg),
+            AnkiDroidError::InvalidModelId(id) => AndroidError::ValidationError(format!("Invalid model ID: {}", id)),
+            AnkiDroidError::InvalidDeckId(id) => AndroidError::ValidationError(format!("Invalid deck ID: {}", id)),
+            AnkiDroidError::DuplicateNote(msg) => AndroidError::ValidationError(format!("Duplicate note: {}", msg)),
+            AnkiDroidError::FieldCountMismatch { expected, actual } => AndroidError::ValidationError(format!("Field count mismatch: expected {}, got {}", expected, actual)),
+            AnkiDroidError::JniError(msg) => AndroidError::ContentProviderError(format!("JNI error: {}", msg)),
+            AnkiDroidError::NullPointer(msg) => AndroidError::ContentProviderError(format!("Null pointer: {}", msg)),
+            AnkiDroidError::StringConversionError(msg) => AndroidError::StringConversionError(msg),
+            AnkiDroidError::DatabaseError(msg) => AndroidError::DatabaseError(msg),
+            AnkiDroidError::ValidationError(msg) => AndroidError::ValidationError(msg),
+            AnkiDroidError::IoError(msg) => AndroidError::ContentProviderError(format!("I/O error: {}", msg)),
+            AnkiDroidError::JsonError(msg) => AndroidError::ContentProviderError(format!("JSON error: {}", msg)),
+        }
     }
 }
 

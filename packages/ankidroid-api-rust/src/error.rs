@@ -276,7 +276,7 @@ mod tests {
         // Test JNI error conversion (Android only)
         #[cfg(target_os = "android")]
         {
-            let jni_err = jni::errors::Error::WrongJValueType("test".to_string(), "test".to_string());
+            let jni_err = jni::errors::Error::WrongJValueType("test", "test");
             let converted: AnkiDroidError = jni_err.into();
             assert!(matches!(converted, AnkiDroidError::JniError(_)));
         }

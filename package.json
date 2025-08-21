@@ -18,7 +18,7 @@
     "dev:build": "bash scripts/dev-android.sh",
     "android:dev": "npm run android:dev --workspace=tauri-plugin-ankidroid-e2e-test-app",
     "android:deploy": "npm run android:deploy --workspace=tauri-plugin-ankidroid-e2e-test-app",
-    "test:e2e": "npm run test:e2e:create-card --workspace=tauri-plugin-ankidroid-e2e-test-app",
+    "test:e2e": "npm run test:e2e --workspace=tauri-plugin-ankidroid-e2e-test-app",
     "emu:create": "bash scripts/emu-create-avd.sh",
     "emu:start": "bash scripts/emu-start.sh",
     "emu:stop": "bash scripts/emu-start.sh stop",

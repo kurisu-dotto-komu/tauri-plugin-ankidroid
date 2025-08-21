@@ -196,31 +196,51 @@ impl<'local> AnkiDroidApi<'local> {
 
     // Internal implementation of availability check
     fn is_available_internal(env: &mut SafeJNIEnv, context: &JObject) -> Result<bool> {
-        // Try to find AddContentApi class
-        let api_class = match env.find_class_checked("com/ichi2/anki/api/AddContentApi") {
-            Ok(class) => class,
-            Err(_) => {
-                log::debug!("AddContentApi class not found");
-                return Ok(false);
-            }
-        };
-
-        // Try to call getAnkiDroidPackageName static method
-        let package_name_result = env.env_mut().call_static_method(
-            &api_class,
-            "getAnkiDroidPackageName",
-            "(Landroid/content/Context;)Ljava/lang/String;",
-            &[JValue::Object(context)],
+        // For external apps, we check if AnkiDroid is installed and accessible via ContentResolver
+        // We don't check for AddContentApi class since it's in AnkiDroid app, not ours
+        
+        // Try to get PackageManager to check if AnkiDroid is installed
+        let pm_result = env.env_mut().call_method(
+            context,
+            "getPackageManager",
+            "()Landroid/content/pm/PackageManager;",
+            &[],
         );
-
-        match package_name_result {
-            Ok(result) => {
-                match result.l() {
-                    Ok(obj) => Ok(!obj.is_null()),
-                    Err(_) => Ok(false),
-                }
-            }
-            Err(_) => Ok(false),
+        
+        let package_manager = match pm_result {
+            Ok(result) => match result.l() {
+                Ok(pm) if !pm.is_null() => pm,
+                _ => return Ok(false),
+            },
+            Err(_) => return Ok(false),
+        };
+        
+        // Check if AnkiDroid package is installed
+        let package_name = env.new_string_checked("com.ichi2.anki")?;
+        
+        // Try to get package info (will fail if not installed)
+        let package_info_result = env.env_mut().call_method(
+            &package_manager,
+            "getPackageInfo",
+            "(Ljava/lang/String;I)Landroid/content/pm/PackageInfo;",
+            &[JValue::Object(&package_name), JValue::Int(0)],
+        );
+        
+        match package_info_result {
+            Ok(result) => match result.l() {
+                Ok(info) => {
+                    log::debug!("AnkiDroid package found: com.ichi2.anki");
+                    Ok(!info.is_null())
+                },
+                Err(_) => {
+                    log::debug!("AnkiDroid package not found");
+                    Ok(false)
+                },
+            },
+            Err(_) => {
+                log::debug!("Failed to check for AnkiDroid package");
+                Ok(false)
+            },
         }
     }
 
@@ -673,6 +693,30 @@ impl<'local> AnkiDroidApi<'local> {
         }
 
         Ok(decks)
+    }
+
+    /// Get a mutable reference to the ContentResolver for extended API operations
+    ///
+    /// This method provides access to the underlying ContentResolver for advanced
+    /// database operations not covered by the standard API.
+    ///
+    /// # Returns
+    ///
+    /// A mutable reference to the ContentResolver instance
+    pub fn resolver_mut(&mut self) -> &mut ContentResolver<'local> {
+        &mut self.resolver
+    }
+
+    /// Get a mutable reference to the JNI environment for extended API operations
+    ///
+    /// This method provides access to the underlying JNI environment for advanced
+    /// operations that require direct JNI interaction.
+    ///
+    /// # Returns
+    ///
+    /// A mutable reference to the SafeJNIEnv instance
+    pub fn env_mut(&mut self) -> &mut SafeJNIEnv<'local> {
+        &mut self.env
     }
 }
 

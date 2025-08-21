@@ -18,11 +18,18 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
     Builder::new("ankidroid")
         .invoke_handler(tauri::generate_handler![
             commands::hello,
+            // New commands with correct terminology
+            commands::list_notes,
+            commands::create_note,
+            commands::update_note,
+            commands::delete_note,
+            // Legacy commands for backward compatibility
             commands::list_cards,
             commands::create_card,
-            commands::get_decks,
             commands::update_card,
             commands::delete_card,
+            // Deck operations
+            commands::get_decks,
         ])
         .setup(|app, api| {
             mobile::init(app, api)?;

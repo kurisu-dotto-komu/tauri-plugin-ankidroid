@@ -27,6 +27,7 @@ log = { workspace = true }
 tauri = { workspace = true, optional = true }
 
 [target.'cfg(target_os = "android")'.dependencies]
+ankidroid-api-rust = { path = "../ankidroid-api-rust" }
 jni = "0.21"
 ndk = "0.9"
 ndk-context = "0.1"

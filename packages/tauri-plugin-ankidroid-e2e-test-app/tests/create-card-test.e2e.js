@@ -5,7 +5,7 @@ describe('Create Card E2E Test', () => {
 
   before(async () => {
     console.log('Waiting for app to load...');
-    await driver.pause(3000);
+    await driver.pause(5000); // Give more time for WebView to initialize
 
     // Get and log all available contexts
     const contexts = await driver.getContexts();
@@ -25,9 +25,32 @@ describe('Create Card E2E Test', () => {
 
     console.log(`Found WebView context: ${webviewContext}`);
     
-    // Switch to WebView context
-    await driver.switchContext(webviewContext);
-    console.log('Switched to WebView context');
+    // Switch to WebView context with retry
+    let switched = false;
+    for (let i = 0; i < 3; i++) {
+      try {
+        await driver.switchContext(webviewContext);
+        console.log('Switched to WebView context');
+        
+        // Wait a bit for the context to stabilize
+        await driver.pause(2000);
+        
+        // Try to get the page source to verify the connection
+        const source = await driver.getPageSource();
+        if (source && source.length > 100) {
+          console.log('WebView context is stable');
+          switched = true;
+          break;
+        }
+      } catch (error) {
+        console.log(`Attempt ${i + 1} to switch context failed:`, error.message);
+        await driver.pause(2000);
+      }
+    }
+    
+    if (!switched) {
+      throw new Error('Failed to establish stable WebView context connection');
+    }
   });
 
   it('should load decks before creating a card', async () => {
