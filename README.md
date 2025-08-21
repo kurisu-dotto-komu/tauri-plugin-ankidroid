@@ -1,5 +1,7 @@
 # Tauri Plugin Workspace with Android Emulator
 
+> WARNING! This is a work in progress. It is not yet ready for production use.
+
 ## Package Overview
 
 This workspace contains multiple packages for building a Tauri plugin that interfaces with AnkiDroid:
@@ -118,6 +120,7 @@ When running in the devcontainer, Chrome DevTools are automatically configured. 
 5. **Click "inspect"** to open DevTools
 
 The devcontainer automatically forwards these ports:
+
 - **5173** - Vite dev server (frontend with HMR)
 - **6080** - VNC desktop for viewing emulator
 - **9222** - Chrome DevTools Protocol
@@ -188,6 +191,7 @@ This project includes multiple testing layers to ensure reliability and function
 **Best for**: Daily development, debugging, visual verification
 
 **How to run**:
+
 ```bash
 # Start the full development environment
 npm run dev
@@ -197,6 +201,7 @@ npm run android:deploy
 ```
 
 **What it does**:
+
 - Builds the Tauri app with your plugin
 - Deploys to Android emulator
 - Provides hot reload for frontend changes
@@ -210,12 +215,14 @@ npm run android:deploy
 **Best for**: Automated validation of complete user workflows
 
 **Technologies used**:
+
 - **Appium**: Mobile automation framework (like Selenium for mobile)
 - **WebDriverIO**: Test runner and browser/app automation library
 - **Mocha**: JavaScript test framework for writing test cases
 - **Android UIAutomator2**: Driver for Android app automation
 
 **How to run**:
+
 ```bash
 # Run all E2E tests
 npm run test:e2e
@@ -231,6 +238,7 @@ npm run e2e
 ```
 
 **What it tests**:
+
 - ✅ **CREATE**: Card creation with front/back/deck/tags
 - ✅ **READ**: Retrieving and displaying cards
 - ✅ **UPDATE**: Modifying existing cards
@@ -240,6 +248,7 @@ npm run e2e
 - ✅ **PERFORMANCE**: Rapid operations, stress testing
 
 **Test Flow**:
+
 1. Appium starts and connects to Android emulator
 2. Launches your app (`com.tauri.ankidroid.demo`)
 3. Simulates user interactions (taps, typing, scrolling)
@@ -247,6 +256,7 @@ npm run e2e
 5. Generates test report
 
 **When E2E tests fail**:
+
 - Check emulator is running: `adb devices`
 - Check app is installed: `adb shell pm list packages | grep tauri`
 - Check Appium is accessible: `curl http://127.0.0.1:4723/status`
@@ -257,11 +267,12 @@ npm run e2e
 **Best for**: Verifying that different parts work together
 
 **How to run**:
+
 ```bash
 # Test Rust compilation
 cargo check --workspace
 
-# Test frontend building  
+# Test frontend building
 npm run build
 
 # Test full integration
@@ -269,6 +280,7 @@ npm run test:all
 ```
 
 **What it tests**:
+
 - Plugin compiles correctly
 - Frontend builds successfully
 - Dependencies resolve properly
@@ -279,6 +291,7 @@ npm run test:all
 **Best for**: Testing individual functions and components
 
 **How to run**:
+
 ```bash
 # Rust unit tests
 cargo test
@@ -293,9 +306,10 @@ npm run test:all
 ### Understanding Test Results
 
 #### E2E Test Output Example:
+
 ```
 ✅ CREATE: Cards can be created with all fields
-✅ READ: Created cards can be retrieved and displayed  
+✅ READ: Created cards can be retrieved and displayed
 ✅ UPDATE: Card information can be modified
 ❌ DELETE: Button selector not found (UI issue, not plugin issue)
 ✅ BULK: Multiple cards handled efficiently
@@ -306,6 +320,7 @@ npm run test:all
 ```
 
 **What this means**:
+
 - Your plugin functionality is working correctly
 - 1 test failed due to UI selector issue (not a critical failure)
 - Overall system is stable and functional
@@ -313,11 +328,13 @@ npm run test:all
 ### Testing Workflow for Development
 
 #### During Feature Development:
+
 1. **Write code** → **Manual testing** (`npm run dev`)
 2. **Fix issues** → **Unit tests** (`cargo test`)
 3. **Ready for review** → **E2E tests** (`npm run e2e`)
 
 #### Before Committing:
+
 ```bash
 # Quick validation
 npm run lint && npm run test:all
@@ -329,6 +346,7 @@ npm run e2e
 ### Troubleshooting Common Test Issues
 
 #### "No emulator found" or "Connection refused"
+
 ```bash
 # Check emulator status
 adb devices
@@ -341,7 +359,8 @@ npm run emu:start
 adb devices
 ```
 
-#### "App not installed" 
+#### "App not installed"
+
 ```bash
 # Check if app is installed
 adb shell pm list packages | grep tauri
@@ -351,6 +370,7 @@ npm run android:deploy
 ```
 
 #### "Appium connection failed"
+
 ```bash
 # Check Appium is running
 curl http://127.0.0.1:4723/status
@@ -360,7 +380,9 @@ appium server --address 127.0.0.1 --port 4723 --log-level info
 ```
 
 #### "Frontend shows network errors"
+
 This usually means the app isn't properly built/deployed:
+
 ```bash
 # Force rebuild and redeploy
 npm run android:deploy
@@ -380,7 +402,7 @@ adb shell am start -n com.tauri.ankidroid.demo/.MainActivity
 ### Best Practices
 
 1. **Always start with manual testing** to see what's actually happening
-2. **Use E2E tests for regression testing** of critical user flows  
+2. **Use E2E tests for regression testing** of critical user flows
 3. **Run unit tests frequently** during development
 4. **Check the emulator GUI** at `http://localhost:6080` when tests fail
 5. **Look at test logs** to understand what the automation is trying to do
@@ -390,12 +412,14 @@ adb shell am start -n com.tauri.ankidroid.demo/.MainActivity
 The `ankidroid-api-rust` package can be used independently in any Rust Android project:
 
 ### Add to your Cargo.toml:
+
 ```toml
 [dependencies]
 ankidroid-api-rust = { path = "../path/to/ankidroid-api-rust" }
 ```
 
 ### Basic Usage:
+
 ```rust
 use ankidroid_api_rust::AnkiDroidApi;
 use jni::objects::JObject;
@@ -406,14 +430,14 @@ fn use_ankidroid(env: JNIEnv, context: JObject) -> Result<(), Box<dyn std::error
     if !AnkiDroidApi::is_available(env, &context)? {
         return Err("AnkiDroid not installed".into());
     }
-    
+
     // Create API instance
     let mut api = AnkiDroidApi::try_new(env, &context)?;
-    
+
     // Get deck list
     let decks = api.get_deck_list()?;
     println!("Found {} decks", decks.len());
-    
+
     // Add a note
     let note_id = api.add_note(
         model_id,
@@ -421,12 +445,13 @@ fn use_ankidroid(env: JNIEnv, context: JObject) -> Result<(), Box<dyn std::error
         &["Question", "Answer"],
         Some(&["tag1", "tag2"])
     )?;
-    
+
     Ok(())
 }
 ```
 
 ### Features:
+
 - ✅ Full AnkiDroid API coverage
 - ✅ Type-safe Rust bindings
 - ✅ Comprehensive error handling
@@ -435,5 +460,3 @@ fn use_ankidroid(env: JNIEnv, context: JObject) -> Result<(), Box<dyn std::error
 - ✅ No Tauri dependency required
 
 See the [ankidroid-api-rust README](./packages/ankidroid-api-rust/README.md) for detailed API documentation.
-
-
