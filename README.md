@@ -4,9 +4,77 @@
 
 This workspace contains multiple packages for building a Tauri plugin that interfaces with AnkiDroid:
 
-- **[`tauri-plugin-ankidroid-android`](./packages/tauri-plugin-ankidroid-android)** - The core Rust plugin providing native Android integration with AnkiDroid's content provider API
-- **[`tauri-plugin-ankidroid-js`](./packages/tauri-plugin-ankidroid-js)** - JavaScript/TypeScript bindings for the plugin, providing a clean API for Tauri apps
-- **[`tauri-plugin-ankidroid-e2e-test-app`](./packages/tauri-plugin-ankidroid-e2e-test-app)** - Example Tauri application demonstrating plugin usage and testing capabilities
+### Core Packages
+
+- **[`ankidroid-api-rust`](./packages/ankidroid-api-rust)** - Low-level Rust library providing complete AnkiDroid API bindings
+  - Direct JNI integration with Android ContentResolver
+  - Type-safe Rust API for all AnkiDroid operations
+  - Support for notes, decks, models, and media management
+  - Comprehensive error handling and validation
+  - Can be used independently of Tauri for any Rust Android project
+
+- **[`tauri-plugin-ankidroid-android`](./packages/tauri-plugin-ankidroid-android)** - Tauri plugin wrapper around ankidroid-api-rust
+  - Exposes AnkiDroid functionality to Tauri applications
+  - Handles Tauri-specific integration and commands
+  - Manages permissions and Android context
+  - Provides simplified API for common operations
+
+### JavaScript/TypeScript Bindings
+
+- **[`tauri-plugin-ankidroid-js`](./packages/tauri-plugin-ankidroid-js)** - JavaScript/TypeScript bindings for the plugin
+  - Clean, promise-based API for frontend applications
+  - Full TypeScript support with type definitions
+  - Handles serialization/deserialization
+  - Provides both high-level and low-level API access
+
+### Test Application
+
+- **[`tauri-plugin-ankidroid-e2e-test-app`](./packages/tauri-plugin-ankidroid-e2e-test-app)** - Example Tauri application
+  - Demonstrates all plugin capabilities
+  - Includes comprehensive E2E tests
+  - Shows best practices for integration
+  - Provides UI for testing CRUD operations
+
+## Architecture
+
+The plugin follows a layered architecture:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                   Tauri Application (Frontend)              │
+│                     React/Vue/Svelte/etc                    │
+└──────────────────────┬──────────────────────────────────────┘
+                       │ JavaScript API calls
+┌──────────────────────▼──────────────────────────────────────┐
+│              tauri-plugin-ankidroid-js                      │
+│                 TypeScript bindings                         │
+└──────────────────────┬──────────────────────────────────────┘
+                       │ Tauri IPC
+┌──────────────────────▼──────────────────────────────────────┐
+│           tauri-plugin-ankidroid-android                    │
+│                  Tauri Plugin (Rust)                        │
+└──────────────────────┬──────────────────────────────────────┘
+                       │ Uses
+┌──────────────────────▼──────────────────────────────────────┐
+│               ankidroid-api-rust                            │
+│            Low-level AnkiDroid API (Rust)                   │
+└──────────────────────┬──────────────────────────────────────┘
+                       │ JNI + ContentResolver
+┌──────────────────────▼──────────────────────────────────────┐
+│                    AnkiDroid App                            │
+│                  (External Android App)                     │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Key Design Decisions
+
+1. **Separation of Concerns**: The low-level API (`ankidroid-api-rust`) is separate from the Tauri plugin, allowing it to be used in other Rust Android projects.
+
+2. **ContentResolver Only**: We use Android's ContentResolver API exclusively for communication with AnkiDroid. We don't attempt to instantiate AnkiDroid's internal classes (like `AddContentApi`) since they're not available in external apps.
+
+3. **Permission-Based Access**: The app requires `com.ichi2.anki.permission.READ_WRITE_DATABASE` permission to access AnkiDroid's data.
+
+4. **Type Safety**: Full type safety from Rust through TypeScript to the frontend application.
 
 ## Development Environment
 
@@ -316,5 +384,56 @@ adb shell am start -n com.tauri.ankidroid.demo/.MainActivity
 3. **Run unit tests frequently** during development
 4. **Check the emulator GUI** at `http://localhost:6080` when tests fail
 5. **Look at test logs** to understand what the automation is trying to do
+
+## Using ankidroid-api-rust Independently
+
+The `ankidroid-api-rust` package can be used independently in any Rust Android project:
+
+### Add to your Cargo.toml:
+```toml
+[dependencies]
+ankidroid-api-rust = { path = "../path/to/ankidroid-api-rust" }
+```
+
+### Basic Usage:
+```rust
+use ankidroid_api_rust::AnkiDroidApi;
+use jni::objects::JObject;
+use jni::JNIEnv;
+
+fn use_ankidroid(env: JNIEnv, context: JObject) -> Result<(), Box<dyn std::error::Error>> {
+    // Check if AnkiDroid is available
+    if !AnkiDroidApi::is_available(env, &context)? {
+        return Err("AnkiDroid not installed".into());
+    }
+    
+    // Create API instance
+    let mut api = AnkiDroidApi::try_new(env, &context)?;
+    
+    // Get deck list
+    let decks = api.get_deck_list()?;
+    println!("Found {} decks", decks.len());
+    
+    // Add a note
+    let note_id = api.add_note(
+        model_id,
+        deck_id,
+        &["Question", "Answer"],
+        Some(&["tag1", "tag2"])
+    )?;
+    
+    Ok(())
+}
+```
+
+### Features:
+- ✅ Full AnkiDroid API coverage
+- ✅ Type-safe Rust bindings
+- ✅ Comprehensive error handling
+- ✅ Support for notes, decks, models, media
+- ✅ Direct ContentResolver access
+- ✅ No Tauri dependency required
+
+See the [ankidroid-api-rust README](./packages/ankidroid-api-rust/README.md) for detailed API documentation.
 
 
